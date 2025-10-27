@@ -34,7 +34,7 @@ const COLOR_PALETTE = {
 };
 
 const headerImage = require('../assets/hero1.jpg');
-const baseUrl = 'your_base_url_here'; // Placeholder for the original baseUrl
+import baseUrl from ".././constants/baseUrl" 
 
 const { width, height } = Dimensions.get("window");
 
@@ -68,8 +68,11 @@ export default function CompleteTaskScreen({ route, navigation }) {
         }
 
         try {
+
+
             setLoading(true);
             await axios.put(`${baseUrl}/task/complete-task/${taskId}`, {
+
                 message,
                 status,
             });
@@ -79,6 +82,8 @@ export default function CompleteTaskScreen({ route, navigation }) {
             navigation.goBack();
         } catch (error) {
             console.error('Error updating task:', error.response ? error.response.data : error.message);
+
+
             // Using a custom modal or component instead of Alert
             Alert.alert('Error', 'Failed to update task.');
         } finally {
@@ -89,8 +94,7 @@ export default function CompleteTaskScreen({ route, navigation }) {
     return (
         <View style={styles.container}>
             {/* Background Gradient */}
-            <LinearGradient
-                 colors={['#dbf6faff', '#90dafcff']}
+            <LinearGradient colors={['#b6e4ebff', '#1796d1ff']}
                 style={styles.backgroundGradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
@@ -118,7 +122,7 @@ export default function CompleteTaskScreen({ route, navigation }) {
                         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backArrow}>
                             <Ionicons name="chevron-back-outline" size={30} color={COLOR_PALETTE.primary} />
                         </TouchableOpacity>
-                        
+
                         <Image
                             source={headerImage}
                             style={styles.headerRightImage}
@@ -158,7 +162,7 @@ export default function CompleteTaskScreen({ route, navigation }) {
                                 placeholder="Enter message"
                                 placeholderTextColor="#A9A9A9"
                                 multiline
-                                numberOfLines={3} 
+                                numberOfLines={3}
                                 style={styles.textInputMultiline}
                             />
                         </View>
@@ -187,7 +191,7 @@ export default function CompleteTaskScreen({ route, navigation }) {
                             </LinearGradient>
                         </TouchableOpacity>
 
-                        
+
                     </View>
                 </View>
             </SafeAreaView>
@@ -242,7 +246,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: 15,
-        
+
     },
     backArrow: {
         padding: 8,
@@ -266,7 +270,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: 20,
         marginTop: 100,
-        flex: 1, 
+        flex: 1,
         justifyContent: 'center',
     },
     screenTitle: {
@@ -408,4 +412,3 @@ const styles = StyleSheet.create({
         marginLeft: 5,
     },
 });
-

@@ -19,7 +19,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import Icon from "react-native-vector-icons/FontAwesome";
 
 import COLORS from "../constants/color";
-import Header from "../components/Header";
 import Button from "../components/Button";
 import chitBaseUrl from "../constants/baseUrl";
 import goldBaseUrl from "../constants/goldBaseUrl";
@@ -45,14 +44,12 @@ const AddLead = ({ route, navigation }) => {
         const fetchGroups = async () => {
             const currentUrl =
                 selectedTicket === "chit" ? `${chitBaseUrl}` : `${goldBaseUrl}`;
-
             try {
                 const response = await axios.get(`${currentUrl}/group/get-group`);
                 if (response.data) {
                     setGroups(response.data || []);
                     setSelectedGroup("");
                 } else {
-                    console.error("No data in response");
                     setGroups([]);
                 }
             } catch (error) {
@@ -60,10 +57,7 @@ const AddLead = ({ route, navigation }) => {
                 setGroups([]);
             }
         };
-
-        if (selectedTicket) {
-            fetchGroups();
-        }
+        if (selectedTicket) fetchGroups();
     }, [selectedTicket]);
 
     useEffect(() => {
@@ -131,7 +125,6 @@ const AddLead = ({ route, navigation }) => {
                 setSelectedTicket("chit");
                 navigation.navigate("ViewLeads", { user: user });
             } else {
-                console.log("Error:", response.data);
                 Alert.alert("Error", response.data?.message || "Error adding lead.");
             }
         } catch (error) {
@@ -143,9 +136,9 @@ const AddLead = ({ route, navigation }) => {
     };
 
     return (
-        <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.white }}>
+        <SafeAreaView style={styles.safeArea}>
             <LinearGradient
-                 colors={['#dbf6faff', '#90dafcff']}
+                colors={["#5E17EB", "#8A2BE2"]}
                 style={styles.gradientOverlay}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
@@ -155,24 +148,30 @@ const AddLead = ({ route, navigation }) => {
                     style={styles.container}
                 >
                     <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-                        <View style={{ marginHorizontal: 22, marginTop: 12 }}>
-                            <Header />
-                            <View style={styles.titleContainer}>
-                                <Text style={styles.title}>Add Lead</Text>
+                        <View style={styles.innerContainer}>
+                            {/* Custom Violet Header */}
+                            <View style={styles.headerContainer}>
                                 <TouchableOpacity
+                                    onPress={() => navigation.goBack()}
+                                    style={styles.backButton}
+                                >
+                                    <Icon name="arrow-left" size={22} color="#fff" />
+                                </TouchableOpacity>
+                                <Text style={styles.headerTitle}>Add Lead</Text>
+                                <TouchableOpacity
+                                    onPress={() => navigation.navigate("ViewLeads", { user })}
                                     style={styles.myLeadsButton}
-                                    onPress={() => navigation.navigate("ViewLeads", { user: user })}
                                 >
                                     <Text style={styles.myLeadsButtonText}>My Leads</Text>
                                 </TouchableOpacity>
                             </View>
 
-                            <View style={styles.contentContainer}>
-                                <Text style={styles.label}>Name</Text>
+                            {/* White form area */}
+                            <View style={styles.formContainer}>
+                                <Text style={styles.label}>Customer Name</Text>
                                 <TextInput
-                                    style={styles.textInput}
-                                    placeholder="Enter Name"
-                                    keyboardType="default"
+                                    style={styles.input}
+                                    placeholder="Enter full name"
                                     value={customerInfo.full_name}
                                     onChangeText={(value) =>
                                         handleInputChange("full_name", value)
@@ -181,8 +180,8 @@ const AddLead = ({ route, navigation }) => {
 
                                 <Text style={styles.label}>Phone Number</Text>
                                 <TextInput
-                                    style={styles.textInput}
-                                    placeholder="Enter Phone Number"
+                                    style={styles.input}
+                                    placeholder="Enter phone number"
                                     keyboardType="phone-pad"
                                     value={customerInfo.phone_number}
                                     onChangeText={(value) =>
@@ -194,40 +193,64 @@ const AddLead = ({ route, navigation }) => {
                                 <View style={styles.pickerContainer}>
                                     <Picker
                                         selectedValue={customerInfo.profession}
-                                        onValueChange={(itemValue) =>
-                                            handleInputChange("profession", itemValue)
+                                        onValueChange={(value) =>
+                                            handleInputChange("profession", value)
                                         }
                                     >
                                         <Picker.Item label="Select Profession" value="" />
                                         <Picker.Item label="Employed" value="Employed" />
-                                        <Picker.Item label="Self-Employed" value="Self-Employed" />
+                                        <Picker.Item
+                                            label="Self-Employed"
+                                            value="Self-Employed"
+                                        />
                                     </Picker>
                                 </View>
 
+                                <Text style={styles.label}>Scheme Type</Text>
                                 <View style={styles.tabContainer}>
                                     <TouchableOpacity
-                                        style={[styles.tab, selectedTicket === "chit" && styles.activeTab]}
+                                        style={[
+                                            styles.tab,
+                                            selectedTicket === "chit" && styles.activeTab,
+                                        ]}
                                         onPress={() => setSelectedTicket("chit")}
                                     >
-                                        <Text style={[styles.tabText, selectedTicket === "chit" && styles.activeTabText]}>
+                                        <Text
+                                            style={[
+                                                styles.tabText,
+                                                selectedTicket === "chit" &&
+                                                    styles.activeTabText,
+                                            ]}
+                                        >
                                             Chit
                                         </Text>
                                     </TouchableOpacity>
                                     <TouchableOpacity
-                                        style={[styles.tab, selectedTicket === "gold" && styles.activeTab]}
+                                        style={[
+                                            styles.tab,
+                                            selectedTicket === "gold" && styles.activeTab,
+                                        ]}
                                         onPress={() => setSelectedTicket("gold")}
                                     >
-                                        <Text style={[styles.tabText, selectedTicket === "gold" && styles.activeTabText]}>
+                                        <Text
+                                            style={[
+                                                styles.tabText,
+                                                selectedTicket === "gold" &&
+                                                    styles.activeTabText,
+                                            ]}
+                                        >
                                             Gold
                                         </Text>
                                     </TouchableOpacity>
                                 </View>
 
-                                <Text style={styles.label}>Group</Text>
+                                <Text style={styles.label}>Select Group</Text>
                                 <View style={styles.pickerContainer}>
                                     <Picker
                                         selectedValue={selectedGroup}
-                                        onValueChange={(value) => setSelectedGroup(value)}
+                                        onValueChange={(value) =>
+                                            setSelectedGroup(value)
+                                        }
                                     >
                                         <Picker.Item label="Select Group" value="" />
                                         {groups.map((group) => (
@@ -243,11 +266,10 @@ const AddLead = ({ route, navigation }) => {
                                 <Button
                                     title={isLoading ? "Please wait..." : "Add Lead"}
                                     filled
-                                    style={{
-                                        marginTop: 18,
-                                        marginBottom: 4,
-                                        backgroundColor: isLoading ? "gray" : COLORS.third,
-                                    }}
+                                    style={[
+                                        styles.submitButton,
+                                        { backgroundColor: isLoading ? "gray" : "#7A28CB" },
+                                    ]}
                                     onPress={handleAddLead}
                                 />
                             </View>
@@ -260,93 +282,105 @@ const AddLead = ({ route, navigation }) => {
 };
 
 const styles = StyleSheet.create({
+    safeArea: {
+        flex: 1,
+        backgroundColor: "#fff",
+    },
     gradientOverlay: {
         flex: 1,
     },
     container: {
         flex: 1,
     },
-    titleContainer: {
-        display: "flex",
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        padding: 10,
-        marginTop: 20,
-        marginBottom: 20,
+    innerContainer: {
+        flex: 1,
     },
-    title: {
-        fontSize: 26,
-        fontWeight: 'bold',
-        color: '#333',
+    headerContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        paddingVertical: 16,
+        paddingHorizontal: 20,
+        backgroundColor: "transparent",
+        marginTop: 10,
+    },
+    backButton: {
+        backgroundColor: "rgba(255,255,255,0.2)",
+        padding: 8,
+        borderRadius: 20,
+    },
+    headerTitle: {
+        fontSize: 24,
+        fontWeight: "bold",
+        color: "#fff",
     },
     myLeadsButton: {
+        backgroundColor: "#fff",
         paddingVertical: 8,
         paddingHorizontal: 16,
         borderRadius: 20,
-        backgroundColor: COLORS.primary,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 5,
-        elevation: 5,
     },
     myLeadsButtonText: {
-        color: COLORS.white,
-        fontWeight: 'bold',
+        color: "#6C2DC7",
+        fontWeight: "bold",
+    },
+    formContainer: {
+        backgroundColor: "#fff",
+        borderTopLeftRadius: 30,
+        borderTopRightRadius: 30,
+        padding: 20,
+        flex: 1,
+        marginTop: 10,
     },
     label: {
         fontSize: 16,
-        fontWeight: 'bold',
-        color: '#333',
+        fontWeight: "600",
+        color: "#333",
         marginTop: 10,
     },
-    textInput: {
+    input: {
         height: 50,
-        width: "100%",
-        backgroundColor: COLORS.white,
-        borderRadius: 15,
+        borderRadius: 12,
+        backgroundColor: "#f9f9f9",
         paddingHorizontal: 15,
-        marginVertical: 10,
-        color: "#000",
+        fontSize: 15,
+        elevation: 1,
+        marginTop: 5,
     },
-    contentContainer: {
-        marginTop: -4,
+    pickerContainer: {
+        backgroundColor: "#f9f9f9",
+        borderRadius: 12,
+        marginVertical: 8,
+        elevation: 1,
     },
     tabContainer: {
         flexDirection: "row",
-        backgroundColor: "rgba(255, 255, 255, 0.7)",
-        borderRadius: 15,
-        marginBottom: 10,
+        backgroundColor: "#f1f1f1",
+        borderRadius: 12,
+        marginVertical: 8,
         padding: 5,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 5,
-        marginTop: 10,
     },
     tab: {
         flex: 1,
         paddingVertical: 10,
         alignItems: "center",
-        borderRadius: 12,
+        borderRadius: 8,
     },
     activeTab: {
-        backgroundColor: '#da8201',
+        backgroundColor: "#7A28CB",
     },
     tabText: {
-        fontSize: 16,
         color: "#666",
         fontWeight: "500",
+        fontSize: 15,
     },
     activeTabText: {
-        color: '#333',
-        fontWeight: 'bold',
+        color: "#fff",
+        fontWeight: "bold",
     },
-    pickerContainer: {
-        backgroundColor: COLORS.white,
-        borderRadius: 15,
-        marginVertical: 10,
+    submitButton: {
+        marginTop: 20,
+        marginBottom: 30,
     },
 });
 

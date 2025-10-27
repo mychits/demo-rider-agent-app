@@ -13,21 +13,29 @@ import {
 import React, { useState, useEffect, useCallback } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import axios from "axios";
-import COLORS from "../constants/color";
-import Header from "../components/Header";
 import baseUrl from "../constants/baseUrl";
 import { LinearGradient } from "expo-linear-gradient";
 import Icon from "react-native-vector-icons/FontAwesome";
 import { useFocusEffect } from "@react-navigation/native";
-const noImage = require('../assets/no.png');
+
+const noImage = require("../assets/no.png");
+
+const COLOR_PALETTE = {
+	primary: "#6C2DC7", // Violet
+	secondary: "#3B1E7A", // Dark Violet
+	white: "#FFFFFF",
+	textDark: "#2C2C2C",
+	textLight: "#777777",
+	accent: "#8B5CF6",
+};
 
 const whatsappMessage = "Hello from our app!";
 
 const sendWhatsappMessage = (item) => {
 	if (item?.phone_number) {
-		let url = `whatsapp://send?phone=${item.phone_number
-			}&text=${encodeURIComponent(whatsappMessage)}`;
-
+		let url = `whatsapp://send?phone=${item.phone_number}&text=${encodeURIComponent(
+			whatsappMessage
+		)}`;
 		Linking.canOpenURL(url)
 			.then((supported) => {
 				if (supported) {
@@ -36,7 +44,7 @@ const sendWhatsappMessage = (item) => {
 					Alert.alert("WhatsApp is not installed");
 				}
 			})
-			.catch((err) => console.error("An error occurred", err));
+			.catch(() => Alert.alert("Something went wrong!"));
 	}
 };
 
@@ -48,24 +56,7 @@ const openDialer = (item) => {
 					Linking.openURL(`tel:${item.phone_number}`);
 				}
 			})
-			.catch((err) => {
-				Alert.alert("Something went wrong!");
-			});
-	}
-};
-const sendEmail = (item) => {
-	if (item?.email) {
-		Linking.canOpenURL(`mailto:${item.email}`)
-			.then((supported) => {
-				if (supported) {
-					Linking.openURL(`mailto:${item.email}`);
-				} else {
-					Alert.alert("Mail service is not installed");
-				}
-			})
-			.catch((err) => {
-				Alert.alert("Something went wrong!");
-			});
+			.catch(() => Alert.alert("Something went wrong!"));
 	}
 };
 
@@ -80,84 +71,37 @@ const ViewCustomer = ({ route, navigation }) => {
 	const [search, setSearch] = useState("");
 
 	useEffect(() => {
-		const fetchCustomers = async () => {
-			const currentUrl =
-				activeTab === "CHIT" ? `${baseUrl}` : "http://13.60.68.201:3000/api";
-			try {
-				if (activeTab === "CHIT") {
-					setIsChitLoading(true);
-				} else {
-					setIsGoldLoading(true);
-				}
-				const response = await axios.get(
-					`${currentUrl}/user/get-users-by-agent-id/${user.userId}`
-				);
-				if (response.status >= 400)
-					throw new Error("Failed to fetch Customer Data");
-
-				if (activeTab === "CHIT") {
-					setChitCustomers(response.data);
-				} else {
-					setGoldCustomers(response.data);
-				}
-			} catch (err) {
-				console.log(err, "error");
-				if (activeTab === "CHIT") {
-					setChitCustomers([]);
-				} else {
-					setGoldCustomers([]);
-				}
-			} finally {
-				if (activeTab === "CHIT") {
-					setIsChitLoading(false);
-				} else {
-					setIsGoldLoading(false);
-				}
-			}
-		};
 		fetchCustomers();
 	}, [activeTab, user]);
 
 	useFocusEffect(
 		useCallback(() => {
-			const fetchCustomersOnFocus = async () => {
-				const currentUrl =
-					activeTab === "CHIT" ? `${baseUrl}` : "http://13.60.68.201:3000/api";
-				try {
-					if (activeTab === "CHIT") {
-						setIsChitLoading(true);
-					} else {
-						setIsGoldLoading(true);
-					}
-					const response = await axios.get(
-						`${currentUrl}/user/get-users-by-agent-id/${user.userId}`
-					);
-					if (response.status >= 400)
-						throw new Error("Failed to fetch Customer Data");
-
-					if (activeTab === "CHIT") {
-						setChitCustomers(response.data);
-					} else {
-						setGoldCustomers(response.data);
-					}
-				} catch (err) {
-					console.log(err, "error");
-					if (activeTab === "CHIT") {
-						setChitCustomers([]);
-					} else {
-						setGoldCustomers([]);
-					}
-				} finally {
-					if (activeTab === "CHIT") {
-						setIsChitLoading(false);
-					} else {
-						setIsGoldLoading(false);
-					}
-				}
-			};
-			fetchCustomersOnFocus();
+			fetchCustomers();
 		}, [activeTab, user])
 	);
+
+	const fetchCustomers = async () => {
+		const currentUrl =
+			activeTab === "CHIT" ? `${baseUrl}` : "http://13.60.68.201:3000/api";
+		try {
+			if (activeTab === "CHIT") setIsChitLoading(true);
+			else setIsGoldLoading(true);
+
+			const response = await axios.get(
+				`${currentUrl}/user/get-users-by-agent-id/${user.userId}`
+			);
+
+			if (activeTab === "CHIT") setChitCustomers(response.data);
+			else setGoldCustomers(response.data);
+		} catch (err) {
+			console.log(err);
+			if (activeTab === "CHIT") setChitCustomers([]);
+			else setGoldCustomers([]);
+		} finally {
+			if (activeTab === "CHIT") setIsChitLoading(false);
+			else setIsGoldLoading(false);
+		}
+	};
 
 	const renderCustomerCard = ({ item }) => (
 		<View style={styles.card}>
@@ -165,15 +109,23 @@ const ViewCustomer = ({ route, navigation }) => {
 				<Text style={styles.name}>{item.full_name}</Text>
 				<Text style={styles.phoneNumber}>{item.phone_number}</Text>
 				<Text style={styles.schemeType}>
-					{item.scheme_type ? item.scheme_type.charAt(0).toUpperCase() + item.scheme_type.slice(1) : ''}
+					{item.scheme_type
+						? item.scheme_type.charAt(0).toUpperCase() +
+						  item.scheme_type.slice(1)
+						: ""}
 				</Text>
 			</View>
 			<View style={styles.rightSection}>
 				<TouchableOpacity onPress={() => sendWhatsappMessage(item)}>
-					<Icon name="whatsapp" size={24} color="#25D366" style={{ marginBottom: 10 }} />
+					<Icon
+						name="whatsapp"
+						size={24}
+						color="#25D366"
+						style={{ marginBottom: 10 }}
+					/>
 				</TouchableOpacity>
 				<TouchableOpacity onPress={() => openDialer(item)}>
-					<Icon name="phone" size={24} color={COLORS.primary} />
+					<Icon name="phone" size={24} color={COLOR_PALETTE.primary} />
 				</TouchableOpacity>
 			</View>
 		</View>
@@ -182,152 +134,156 @@ const ViewCustomer = ({ route, navigation }) => {
 	const customers = activeTab === "CHIT" ? chitCustomers : goldCustomers;
 	const isLoading = activeTab === "CHIT" ? isChitLoading : isGoldLoading;
 
-	const filteredCustomers = customers.filter(customer =>
+	const filteredCustomers = customers.filter((customer) =>
 		customer.full_name.toLowerCase().includes(search.toLowerCase())
 	);
 
 	return (
-		<SafeAreaView style={{ flex: 1, backgroundColor: COLORS.white }}>
+		<SafeAreaView style={{ flex: 1, backgroundColor: COLOR_PALETTE.white }}>
+			{/* Rounded Violet Header */}
 			<LinearGradient
-				 colors={['#dbf6faff', '#90dafcff']}
-				style={styles.gradientOverlay}
+				colors={[COLOR_PALETTE.primary, COLOR_PALETTE.secondary]}
+				style={styles.headerContainer}
 				start={{ x: 0, y: 0 }}
 				end={{ x: 1, y: 1 }}
 			>
-				<View style={{ flexGrow: 1, marginHorizontal: 22, marginTop: 12 }}>
-					<Header />
-					<View style={styles.titleContainer}>
-						<Text style={styles.title}>Customers</Text>
-						<Text style={styles.totalCountText}>{filteredCustomers.length || 0}</Text>
-					</View>
-					<View style={styles.searchContainer}>
-						<Icon name="search" size={20} color="#666" style={styles.searchIcon} />
-						<TextInput
-							style={styles.searchInput}
-							placeholder="Search..."
-							value={search}
-							onChangeText={setSearch}
-						/>
-					</View>
-					<View style={styles.tabContainer}>
-						<TouchableOpacity
-							style={[styles.tab, activeTab === "CHIT" && styles.activeTab]}
-							onPress={() => setActiveTab("CHIT")}
-						>
-							<Text
-								style={[
-									styles.tabText,
-									activeTab === "CHIT" && styles.activeTabText,
-								]}
-							>
-								Chit Customers
-							</Text>
-						</TouchableOpacity>
-						<TouchableOpacity
-							style={[styles.tab, activeTab === "GOLD" && styles.activeTab]}
-							onPress={() => setActiveTab("GOLD")}
-						>
-							<Text
-								style={[
-									styles.tabText,
-									activeTab === "GOLD" && styles.activeTabText,
-								]}
-							>
-								Gold Customers
-							</Text>
-						</TouchableOpacity>
-					</View>
-					<View style={{ minHeight: 200, flex: 1 }}>
-						{isLoading && <ActivityIndicator size="large" color="#000" style={{ marginTop: 20 }} />}
-						{!isLoading && filteredCustomers.length > 0 && (
-							<FlatList
-								data={filteredCustomers}
-								keyExtractor={(item, index) => index.toString()}
-								renderItem={renderCustomerCard}
-							/>
-						)}
-						{!isLoading && filteredCustomers.length === 0 && (
-							<View style={styles.noDataContainer}>
-								<Image source={noImage} style={styles.noImage} />
-								<Text style={styles.noDataText}>No customers found</Text>
-							</View>
-						)}
-					</View>
+				{/* Back Button */}
+				<TouchableOpacity
+					onPress={() => navigation.goBack()}
+					style={styles.backButton}
+				>
+					<Icon name="arrow-left" size={20} color={COLOR_PALETTE.white} />
+				</TouchableOpacity>
+
+				{/* Header Title */}
+				<View style={styles.titleContainer}>
+					<Text style={styles.title}>Customers</Text>
+					<Text style={styles.totalCountText}>
+						{filteredCustomers.length || 0}
+					</Text>
+				</View>
+
+				{/* Search Box */}
+				<View style={styles.searchContainer}>
+					<Icon name="search" size={20} color="#666" style={styles.searchIcon} />
+					<TextInput
+						style={styles.searchInput}
+						placeholder="Search..."
+						value={search}
+						onChangeText={setSearch}
+					/>
 				</View>
 			</LinearGradient>
+
+			{/* White Content Section */}
+			<View style={styles.bodyContainer}>
+				{/* Tabs */}
+				<View style={styles.tabContainer}>
+					<TouchableOpacity
+						style={[styles.tab, activeTab === "CHIT" && styles.activeTab]}
+						onPress={() => setActiveTab("CHIT")}
+					>
+						<Text
+							style={[
+								styles.tabText,
+								activeTab === "CHIT" && styles.activeTabText,
+							]}
+						>
+							Chit Customers
+						</Text>
+					</TouchableOpacity>
+					<TouchableOpacity
+						style={[styles.tab, activeTab === "GOLD" && styles.activeTab]}
+						onPress={() => setActiveTab("GOLD")}
+					>
+						<Text
+							style={[
+								styles.tabText,
+								activeTab === "GOLD" && styles.activeTabText,
+							]}
+						>
+							Gold Customers
+						</Text>
+					</TouchableOpacity>
+				</View>
+
+				{/* Customer List */}
+				{isLoading ? (
+					<ActivityIndicator
+						size="large"
+						color={COLOR_PALETTE.primary}
+						style={{ marginTop: 20 }}
+					/>
+				) : filteredCustomers.length > 0 ? (
+					<FlatList
+						data={filteredCustomers}
+						keyExtractor={(item, index) => index.toString()}
+						renderItem={renderCustomerCard}
+						contentContainerStyle={{ paddingBottom: 100 }}
+					/>
+				) : (
+					<View style={styles.noDataContainer}>
+						<Image source={noImage} style={styles.noImage} />
+						<Text style={styles.noDataText}>No customers found</Text>
+					</View>
+				)}
+			</View>
+
+			{/* Add Button */}
 			<TouchableOpacity
 				onPress={() => navigation.navigate("AddCustomer", { user: user })}
-				style={{
-					position: "absolute",
-					bottom: 20,
-					right: 20,
-					backgroundColor: COLORS.primary,
-					borderRadius: 30,
-					width: 60,
-					height: 60,
-					justifyContent: "center",
-					alignItems: "center",
-				}}
+				style={styles.addButton}
 			>
-				<Text style={{ color: "white", fontSize: 12, fontWeight: "bold" }}>
-					+ Add
-				</Text>
+				<Text style={styles.addText}>+ Add</Text>
 			</TouchableOpacity>
 		</SafeAreaView>
 	);
 };
 
 const styles = StyleSheet.create({
-	gradientOverlay: {
-		flex: 1,
+	headerContainer: {
+		paddingHorizontal: 20,
+		paddingTop: 20,
+		paddingBottom: 40,
+		borderBottomLeftRadius: 40,
+		borderBottomRightRadius: 40,
+		elevation: 5,
+	},
+	backButton: {
+		alignSelf: "flex-start",
+		marginBottom: 10,
 	},
 	titleContainer: {
-		flexDirection: 'row',
-		justifyContent: 'space-between',
-		alignItems: 'center',
-		padding: 10,
-		marginTop: 20,
-		marginBottom: 20,
+		flexDirection: "row",
+		justifyContent: "space-between",
+		alignItems: "center",
 	},
-	title: {
-		fontSize: 26,
-		fontWeight: 'bold',
-		color: '#333',
-	},
-	totalCountText: {
-		fontSize: 26,
-		fontWeight: 'bold',
-		color: '#333',
-	},
+	title: { fontSize: 26, fontWeight: "bold", color: COLOR_PALETTE.white },
+	totalCountText: { fontSize: 26, fontWeight: "bold", color: COLOR_PALETTE.white },
 	searchContainer: {
-		flexDirection: 'row',
-		alignItems: 'center',
-		backgroundColor: 'rgba(255, 255, 255, 0.7)',
+		flexDirection: "row",
+		alignItems: "center",
+		backgroundColor: COLOR_PALETTE.white,
 		borderRadius: 15,
 		paddingHorizontal: 15,
-		marginBottom: 10,
-		shadowColor: '#000',
-		shadowOffset: { width: 0, height: 2 },
-		shadowOpacity: 0.1,
-		shadowRadius: 5,
+		marginTop: 15,
 	},
-	searchIcon: {
-		marginRight: 10,
-	},
-	searchInput: {
+	searchIcon: { marginRight: 10 },
+	searchInput: { flex: 1, height: 45 },
+	bodyContainer: {
 		flex: 1,
-		height: 50,
+		backgroundColor: COLOR_PALETTE.white,
+		padding: 15,
+		marginTop: -20,
+		borderTopLeftRadius: 30,
+		borderTopRightRadius: 30,
 	},
 	tabContainer: {
 		flexDirection: "row",
-		backgroundColor: "rgba(255, 255, 255, 0.7)",
+		backgroundColor: "rgba(240,240,240,0.9)",
 		borderRadius: 15,
 		marginBottom: 10,
 		padding: 5,
-		shadowColor: '#000',
-		shadowOffset: { width: 0, height: 2 },
-		shadowOpacity: 0.1,
-		shadowRadius: 5,
 	},
 	tab: {
 		flex: 1,
@@ -335,72 +291,50 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 		borderRadius: 12,
 	},
-	activeTab: {
-		backgroundColor: '#da8201',
-	},
-	tabText: {
-		fontSize: 16,
-		color: "#666",
-		fontWeight: "500",
-	},
-	activeTabText: {
-		color: '#333',
-		fontWeight: 'bold',
-	},
+	activeTab: { backgroundColor: COLOR_PALETTE.accent },
+	tabText: { fontSize: 16, color: "#444", fontWeight: "500" },
+	activeTabText: { color: COLOR_PALETTE.white, fontWeight: "bold" },
 	card: {
-		backgroundColor: "rgba(255, 255, 255, 0.7)",
+		backgroundColor: "#F8F8F8",
 		flexDirection: "row",
-		justifyContent: 'space-between',
+		justifyContent: "space-between",
 		padding: 15,
 		marginVertical: 5,
 		borderRadius: 15,
-		shadowColor: '#000',
-		shadowOffset: { width: 0, height: 2 },
-		shadowOpacity: 0.1,
-		shadowRadius: 5,
-		alignItems: 'center',
+		alignItems: "center",
+		elevation: 2,
 	},
-	leftSection: {
-		flex: 1,
-	},
-	rightSection: {
-		alignItems: "flex-end",
-		flexDirection: 'row',
-		gap: 15,
-	},
-	name: {
-		fontSize: 18,
-		fontWeight: "600",
-		color: "#000",
-		marginBottom: 5,
-	},
-	phoneNumber: {
-		fontSize: 14,
-		color: "#666",
-	},
+	leftSection: { flex: 1 },
+	rightSection: { flexDirection: "row", gap: 15 },
+	name: { fontSize: 18, fontWeight: "600", color: COLOR_PALETTE.textDark },
+	phoneNumber: { fontSize: 14, color: COLOR_PALETTE.textLight },
 	schemeType: {
 		fontSize: 14,
-		color: "#000",
+		color: COLOR_PALETTE.primary,
 		fontWeight: "500",
 		marginTop: 5,
 	},
 	noDataContainer: {
 		flex: 1,
-		justifyContent: 'center',
-		alignItems: 'center',
+		justifyContent: "center",
+		alignItems: "center",
 		marginTop: 50,
 	},
-	noDataText: {
-		fontSize: 14,
-		color: '#555',
-		textAlign: 'center',
+	noDataText: { fontSize: 14, color: COLOR_PALETTE.textLight, textAlign: "center" },
+	noImage: { width: 200, height: 120, resizeMode: "contain", marginBottom: 20 },
+	addButton: {
+		position: "absolute",
+		bottom: 80,
+		right: 20,
+		backgroundColor: "#f07408",
+		borderRadius: 30,
+		width: 60,
+		height: 60,
+		justifyContent: "center",
+		alignItems: "center",
+		elevation: 6,
 	},
-	noImage: {
-		width: 250,
-		height: 150,
-		resizeMode: 'contain',
-		marginBottom: 20,
-	}
+	addText: { color: COLOR_PALETTE.white, fontSize: 12, fontWeight: "bold" },
 });
 
 export default ViewCustomer;

@@ -20,7 +20,7 @@
     "@react-navigation/stack": "^6.4.1",
     "axios": "^1.7.2",
     "esc-pos-encoder": "^3.0.0",
-    "expo": "^54.0.7",
+    "expo": "^54.0.20",
     "expo-blur": "~15.0.7",
     "expo-document-picker": "~14.0.7",
     "expo-font": "~14.0.8",
