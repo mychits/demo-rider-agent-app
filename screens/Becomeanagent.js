@@ -11,6 +11,8 @@ import {
   Platform,
   ActivityIndicator,
   KeyboardAvoidingView,
+  LayoutAnimation,
+  UIManager,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -18,6 +20,11 @@ import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
 import Toast from "react-native-toast-message";
 import baseUrl from "../constants/baseUrl";
+
+// Enable smooth animation for Android
+if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 const Becomeanagent = ({ navigation }) => {
   const insets = useSafeAreaInsets();
@@ -29,10 +36,21 @@ const Becomeanagent = ({ navigation }) => {
   const [agent_id_proof_type, setAgentIdProofType] = useState("");
   const [agent_id_proof_number, setAgentIdProofNumber] = useState("");
   const [agent_bank_account_number, setAgentBankAccountNumber] = useState("");
-  const [agent_bank_account_ifsc_code, setAgentBankAccountIfscCode] =
-    useState("");
+  const [agent_bank_account_ifsc_code, setAgentBankAccountIfscCode] = useState("");
   const [agent_experience, setAgentExperience] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  // Expand/collapse states
+  const [showPersonal, setShowPersonal] = useState(true);
+  const [showVerification, setShowVerification] = useState(false);
+  const [showBank, setShowBank] = useState(false);
+
+  const toggleSection = (section) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    if (section === "personal") setShowPersonal(!showPersonal);
+    else if (section === "verification") setShowVerification(!showVerification);
+    else if (section === "bank") setShowBank(!showBank);
+  };
 
   const validateForm = () => {
     if (
@@ -93,8 +111,7 @@ const Becomeanagent = ({ navigation }) => {
         appliedAt: new Date().toISOString(),
       };
 
-      const fullUrl = `${baseUrl}/become-agent/agents/become`;
-      const response = await axios.post(fullUrl, formData);
+      const response = await axios.post(`${baseUrl}/become-agent/agents/become`, formData);
 
       if (response.status === 200 || response.status === 201) {
         Toast.show({
@@ -140,139 +157,165 @@ const Becomeanagent = ({ navigation }) => {
         { paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : insets.top },
       ]}
     >
-      <LinearGradient
-        colors={["#4B0082", "#7B2CBF", "#9D4EDD"]}
-        style={styles.backgroundGradient}
-      >
+      <LinearGradient colors={["#4B0082", "#7B2CBF", "#9D4EDD"]} style={styles.backgroundGradient}>
         <StatusBar backgroundColor="#4B0082" barStyle="light-content" />
 
-        {/* Custom Header */}
+        {/* Header */}
         <View style={[styles.header, { paddingTop: insets.top }]}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
             <Ionicons name="arrow-back" size={26} color="#fff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Agent Application Form</Text>
         </View>
 
-        {/* Subtitle Below Header */}
         <View style={styles.headerSubtitleBox}>
-          <Text style={styles.headerSubtitleText}>
-            Fill in your details to apply as an Agent
-          </Text>
+          <Text style={styles.headerSubtitleText}>Fill in your details to apply as an Agent</Text>
         </View>
 
-        {/* Form Section */}
         <KeyboardAvoidingView
           style={{ flex: 1 }}
           behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.scrollContainer}
-          >
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContainer}>
             <View style={styles.formCard}>
-              <Text style={styles.formSectionTitle}>Personal Information</Text>
+              {/* Personal Info Section */}
+              <TouchableOpacity
+                style={styles.sectionHeader}
+                onPress={() => toggleSection("personal")}
+              >
+                <Text style={styles.formSectionTitle}>Personal Information</Text>
+                <Ionicons
+                  name={showPersonal ? "remove-circle-outline" : "add-circle-outline"}
+                  size={24}
+                  color="#7B2CBF"
+                />
+              </TouchableOpacity>
 
-              <Text style={styles.inputLabel}>Full Name</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter full name"
-                value={agent_full_name}
-                onChangeText={setAgentFullName}
-                placeholderTextColor="#888"
-              />
+              {showPersonal && (
+                <View style={styles.sectionContent}>
+                  <Text style={styles.inputLabel}>Full Name</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter full name"
+                    value={agent_full_name}
+                    onChangeText={setAgentFullName}
+                    placeholderTextColor="#888"
+                  />
 
-              <Text style={styles.inputLabel}>Email Address</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter email"
-                value={agent_email}
-                onChangeText={setAgentEmail}
-                keyboardType="email-address"
-                placeholderTextColor="#888"
-              />
+                  <Text style={styles.inputLabel}>Email Address</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter email"
+                    value={agent_email}
+                    onChangeText={setAgentEmail}
+                    keyboardType="email-address"
+                    placeholderTextColor="#888"
+                  />
 
-              <Text style={styles.inputLabel}>Phone Number</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter 10-digit number"
-                value={agent_phone_number}
-                onChangeText={setAgentPhoneNumber}
-                keyboardType="phone-pad"
-                maxLength={10}
-                placeholderTextColor="#888"
-              />
+                  <Text style={styles.inputLabel}>Phone Number</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter 10-digit number"
+                    value={agent_phone_number}
+                    onChangeText={setAgentPhoneNumber}
+                    keyboardType="phone-pad"
+                    maxLength={10}
+                    placeholderTextColor="#888"
+                  />
 
-              <Text style={styles.inputLabel}>Address</Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                placeholder="Enter full address"
-                value={agent_address}
-                onChangeText={setAgentAddress}
-                multiline
-                placeholderTextColor="#888"
-              />
+                  <Text style={styles.inputLabel}>Address</Text>
+                  <TextInput
+                    style={[styles.input, styles.textArea]}
+                    placeholder="Enter full address"
+                    value={agent_address}
+                    onChangeText={setAgentAddress}
+                    multiline
+                    placeholderTextColor="#888"
+                  />
+                </View>
+              )}
 
-              <Text style={styles.formSectionTitle}>Verification Details</Text>
+              {/* Verification Section */}
+              <TouchableOpacity
+                style={styles.sectionHeader}
+                onPress={() => toggleSection("verification")}
+              >
+                <Text style={styles.formSectionTitle}>Verification Details</Text>
+                <Ionicons
+                  name={showVerification ? "remove-circle-outline" : "add-circle-outline"}
+                  size={24}
+                  color="#7B2CBF"
+                />
+              </TouchableOpacity>
 
-              <Text style={styles.inputLabel}>ID Proof Type</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Aadhaar / PAN / Voter ID"
-                value={agent_id_proof_type}
-                onChangeText={setAgentIdProofType}
-                placeholderTextColor="#888"
-              />
+              {showVerification && (
+                <View style={styles.sectionContent}>
+                  <Text style={styles.inputLabel}>ID Proof Type</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Aadhaar / PAN / Voter ID"
+                    value={agent_id_proof_type}
+                    onChangeText={setAgentIdProofType}
+                    placeholderTextColor="#888"
+                  />
 
-              <Text style={styles.inputLabel}>ID Proof Number</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter ID number"
-                value={agent_id_proof_number}
-                onChangeText={setAgentIdProofNumber}
-                placeholderTextColor="#888"
-              />
+                  <Text style={styles.inputLabel}>ID Proof Number</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter ID number"
+                    value={agent_id_proof_number}
+                    onChangeText={setAgentIdProofNumber}
+                    placeholderTextColor="#888"
+                  />
+                </View>
+              )}
 
-              <Text style={styles.formSectionTitle}>Bank Details</Text>
+              {/* Bank Details Section */}
+              <TouchableOpacity style={styles.sectionHeader} onPress={() => toggleSection("bank")}>
+                <Text style={styles.formSectionTitle}>Bank Details</Text>
+                <Ionicons
+                  name={showBank ? "remove-circle-outline" : "add-circle-outline"}
+                  size={24}
+                  color="#7B2CBF"
+                />
+              </TouchableOpacity>
 
-              <Text style={styles.inputLabel}>Account Number</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter bank account number"
-                value={agent_bank_account_number}
-                onChangeText={setAgentBankAccountNumber}
-                keyboardType="numeric"
-                placeholderTextColor="#888"
-              />
+              {showBank && (
+                <View style={styles.sectionContent}>
+                  <Text style={styles.inputLabel}>Account Number</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter bank account number"
+                    value={agent_bank_account_number}
+                    onChangeText={setAgentBankAccountNumber}
+                    keyboardType="numeric"
+                    placeholderTextColor="#888"
+                  />
 
-              <Text style={styles.inputLabel}>IFSC Code</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter IFSC code"
-                value={agent_bank_account_ifsc_code}
-                onChangeText={setAgentBankAccountIfscCode}
-                autoCapitalize="characters"
-                placeholderTextColor="#888"
-              />
+                  <Text style={styles.inputLabel}>IFSC Code</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter IFSC code"
+                    value={agent_bank_account_ifsc_code}
+                    onChangeText={setAgentBankAccountIfscCode}
+                    autoCapitalize="characters"
+                    placeholderTextColor="#888"
+                  />
 
-              <Text style={styles.inputLabel}>Experience (Optional)</Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                placeholder="e.g., 2 years in sales or chit management"
-                value={agent_experience}
-                onChangeText={setAgentExperience}
-                multiline
-                placeholderTextColor="#888"
-              />
+                  <Text style={styles.inputLabel}>Experience (Optional)</Text>
+                  <TextInput
+                    style={[styles.input, styles.textArea]}
+                    placeholder="e.g., 2 years in sales or chit management"
+                    value={agent_experience}
+                    onChangeText={setAgentExperience}
+                    multiline
+                    placeholderTextColor="#888"
+                  />
+                </View>
+              )}
 
               <TouchableOpacity
-                style={[
-                  styles.submitButton,
-                  isLoading && styles.submitButtonDisabled,
-                ]}
+                style={[styles.submitButton, isLoading && styles.submitButtonDisabled]}
                 onPress={handleSubmitApplication}
                 disabled={isLoading}
               >
@@ -307,27 +350,10 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   backButton: { marginRight: 10, padding: 6 },
-  headerTitle: {
-    color: "#fff",
-    fontSize: 25,
-    fontWeight: "700",
-  },
-  headerSubtitleBox: {
-    marginTop: 80,
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  headerSubtitleText: {
-    color: "#E0D7FF",
-    fontSize: 14,
-    textAlign: "center",
-  },
-  scrollContainer: {
-    flexGrow: 1,
-    paddingHorizontal: 16,
-    paddingBottom: 40,
-    paddingTop: 20,
-  },
+  headerTitle: { color: "#fff", fontSize: 25, fontWeight: "700" },
+  headerSubtitleBox: { marginTop: 80, alignItems: "center", marginBottom: 10 },
+  headerSubtitleText: { color: "#E0D7FF", fontSize: 14, textAlign: "center" },
+  scrollContainer: { flexGrow: 1, paddingHorizontal: 16, paddingBottom: 40, paddingTop: 20 },
   formCard: {
     backgroundColor: "#fff",
     borderRadius: 16,
@@ -341,18 +367,19 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 10,
   },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginVertical: 10,
+  },
+  sectionContent: { marginBottom: 10 },
   formSectionTitle: {
     fontSize: 18,
     fontWeight: "700",
     color: "#7B2CBF",
-    marginBottom: 10,
   },
-  inputLabel: {
-    fontSize: 14,
-    color: "#000",
-    fontWeight: "600",
-    marginBottom: 5,
-  },
+  inputLabel: { fontSize: 14, color: "#000", fontWeight: "600", marginBottom: 5 },
   input: {
     backgroundColor: "#F6F0FF",
     borderRadius: 10,
@@ -363,10 +390,7 @@ const styles = StyleSheet.create({
     color: "#000",
     fontSize: 15,
   },
-  textArea: {
-    height: 100,
-    textAlignVertical: "top",
-  },
+  textArea: { height: 100, textAlignVertical: "top" },
   submitButton: {
     backgroundColor: "#7B2CBF",
     paddingVertical: 16,
@@ -381,12 +405,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   submitButtonDisabled: { backgroundColor: "#C9A9E5" },
-  submitButtonText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "700",
-    letterSpacing: 0.3,
-  },
+  submitButtonText: { color: "#fff", fontSize: 18, fontWeight: "700", letterSpacing: 0.3 },
 });
 
 export default Becomeanagent;

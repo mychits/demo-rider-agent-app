@@ -12,30 +12,29 @@ import {
   UIManager,
   TouchableOpacity,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Picker } from "@react-native-picker/picker";
-import Icon from "react-native-vector-icons/Ionicons";
 import { useNavigation } from "@react-navigation/native";
+import Icon from "react-native-vector-icons/Ionicons";
 import baseUrl from "../constants/baseUrl";
+import COLORS from "../constants/color";
 
-// Violet theme constants
-const COLORS = {
-  primary: "#6D28D9", // Deep violet
-  secondary: "#8B5CF6",
-  accent: "#A78BFA",
-  backgroundLight: "#F3E8FF",
-  textDark: "#1E1B4B",
-  textGrey: "#6B7280",
-  red: "#DC2626",
-  green: "#10B981",
-  white: "#FFFFFF",
-};
+// --- Assets ---
+const NO_REPORTS_IMAGE = require("../assets/NoReports.png");
 
-const BACKGROUND_GRADIENT = [COLORS.secondary, COLORS.primary];
+// --- VIOLET THEME COLORS ---
+const VIOLET_DARK = "#6D28D9";
+const VIOLET_MEDIUM = "#8B5CF6";
+const ACCENT_GREEN = "#10b981";
+const WARNING_RED = "#ef4444";
+const TEXT_DARK = "#1f2937";
+const GREY_TEXT = "#6b7280";
 
-// Enable LayoutAnimation for Android
-if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
+// Enable layout animation for Android
+if (
+  Platform.OS === "android" &&
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
@@ -49,9 +48,9 @@ const formatCurrency = (amount) => {
   })}`;
 };
 
-const ReferredReport = ({ route }) => {
-  const { user } = route.params || {};
+const RelationshipManagerReport = ({ route }) => {
   const navigation = useNavigation();
+  const { user } = route.params || {};
 
   const [groups, setGroups] = useState([]);
   const [dues, setDues] = useState([]);
@@ -61,17 +60,13 @@ const ReferredReport = ({ route }) => {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!user?.userId) {
-        setLoading(false);
-        return;
-      }
-
       try {
         setLoading(true);
         const [groupRes, dueRes] = await Promise.all([
           fetch(`${baseUrl}/group/get-group`),
-          fetch(`${baseUrl}/enroll/due/referral-agent/${user.userId}`),
+          fetch(`${baseUrl}/enroll/due/relationship-manager/${user?.userId}`),
         ]);
+
         const groupJson = await groupRes.json();
         const dueJson = await dueRes.json();
 
@@ -82,53 +77,71 @@ const ReferredReport = ({ route }) => {
           : [];
 
         const allDues = dueJson?.enrollments || [];
-
         setGroups(allGroups);
         setDues(allDues);
 
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
         setFilteredData(allDues);
       } catch (err) {
-        console.error("Error fetching:", err);
+        console.error("Error fetching data:", err);
       } finally {
         setLoading(false);
       }
     };
-    fetchData();
+    if (user?.userId) fetchData();
   }, [user?.userId]);
 
   useEffect(() => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     if (selectedGroup === "all") setFilteredData(dues);
-    else setFilteredData(dues.filter((item) => item.group_id?._id === selectedGroup));
+    else setFilteredData(dues.filter((i) => i.group_id?._id === selectedGroup));
   }, [selectedGroup, dues]);
 
   const renderItem = ({ item }) => {
-    const name = item?.user?.full_name || "Unknown";
-    const phone = item?.user?.phone_number;
-    const groupName = item?.group?.group_name || "N/A";
+    const name = item?.user_id?.full_name || "Unknown";
+    const groupName = item?.group_id?.group_name || "N/A";
+    const paymentType = item?.payment_type || "N/A";
+    const balance = item?.balance || 0;
+    const totalPayable = item?.total_payable_amount?.[0] || 0;
+    const totalProfit = item?.total_profit?.[0] || 0;
     const totalToBePaid = item?.total_to_be_paid || 0;
-    const balance = item?.balance || item?.Balance || 0;
-
-    const statusColor = balance > 0 ? COLORS.red : COLORS.green;
+    const statusColor = balance > 0 ? WARNING_RED : ACCENT_GREEN;
 
     return (
       <View style={styles.cardContainer}>
-        <View style={[styles.cardIndicator, { backgroundColor: statusColor }]} />
+        <View
+          style={[styles.cardStatusIndicator, { backgroundColor: statusColor }]}
+        />
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <Text style={styles.groupName}>{groupName}</Text>
+            <Text style={styles.paymentType}>{paymentType}</Text>
           </View>
 
           <View style={styles.cardBody}>
             <Text style={styles.customerName}>{name}</Text>
-            {phone ? <Text style={styles.customerInfo}>📞 {phone}</Text> : null}
           </View>
 
           <View style={styles.cardFinancial}>
             <View style={styles.financialRow}>
-              <Text style={styles.financialLabel}>Total Paid</Text>
-              <Text style={styles.financialValue}>{formatCurrency(totalToBePaid)}</Text>
+              <Text style={styles.financialLabel}>Total Payable</Text>
+              <Text style={[styles.financialValue, { color: ACCENT_GREEN }]}>
+                {formatCurrency(totalPayable)}
+              </Text>
+            </View>
+
+            <View style={styles.financialRow}>
+              <Text style={styles.financialLabel}>Total Profit</Text>
+              <Text style={[styles.financialValue, { color: ACCENT_GREEN }]}>
+                {formatCurrency(totalProfit)}
+              </Text>
+            </View>
+
+            <View style={styles.financialRow}>
+              <Text style={styles.financialLabel}>Total To Be Paid</Text>
+              <Text style={styles.financialValue}>
+                {formatCurrency(totalToBePaid)}
+              </Text>
             </View>
 
             <View
@@ -136,22 +149,22 @@ const ReferredReport = ({ route }) => {
                 styles.balanceRow,
                 {
                   backgroundColor: balance > 0 ? "#FEE2E2" : "#D1FAE5",
-                  borderColor: balance > 0 ? COLORS.red : COLORS.green,
+                  borderColor: balance > 0 ? WARNING_RED : ACCENT_GREEN,
                 },
               ]}
             >
               <Text
                 style={[
                   styles.balanceLabel,
-                  { color: balance > 0 ? COLORS.red : COLORS.green },
+                  { color: balance > 0 ? WARNING_RED : ACCENT_GREEN },
                 ]}
               >
-                {balance > 0 ? "Outstanding Balance" : "Current Status"}
+                Balance
               </Text>
               <Text
                 style={[
                   styles.balanceValue,
-                  { color: balance > 0 ? COLORS.red : COLORS.green },
+                  { color: balance > 0 ? WARNING_RED : ACCENT_GREEN },
                 ]}
               >
                 {formatCurrency(balance)}
@@ -164,48 +177,44 @@ const ReferredReport = ({ route }) => {
   };
 
   const totalPending = filteredData.reduce(
-    (sum, item) => sum + (item?.balance || item?.Balance || 0),
+    (sum, i) => sum + (i?.balance || 0),
     0
   );
 
   const EmptyList = () => (
     <View style={styles.emptyContainer}>
-      <Image
-        source={{ uri: "https://placehold.co/200x160/F3E8FF/6D28D9?text=No+Data" }}
-        style={styles.emptyImage}
-      />
-      <Text style={styles.emptyText}>No pending dues found</Text>
-      <Text style={styles.emptySubtext}>Try selecting “All Groups” or check later.</Text>
+      <Image source={NO_REPORTS_IMAGE} style={styles.emptyImage} />
+      <Text style={styles.emptyText}>No pending dues found!!</Text>
     </View>
   );
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.backgroundLight }}>
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
-      <LinearGradient colors={BACKGROUND_GRADIENT} style={{ flex: 1 }}>
-        {/* Header with Back Button */}
+    <View style={{ flex: 1 }}>
+      <StatusBar barStyle="light-content" backgroundColor={VIOLET_DARK} />
+      <LinearGradient
+        colors={[VIOLET_DARK, VIOLET_MEDIUM]}
+        style={{ flex: 1 }}
+      >
+        {/* HEADER with Back Button */}
         <View style={styles.header}>
           <TouchableOpacity
-            onPress={() => navigation.goBack()}
             style={styles.backButton}
+            onPress={() => navigation.goBack()}
           >
-            <Icon name="chevron-back" size={26} color={COLORS.white} />
+            <Icon name="arrow-back" size={24} color="#fff" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Referred Report</Text>
-          <View style={{ width: 40 }} />
+          <Text style={styles.headerTitle}>Relationship Report</Text>
         </View>
 
-        <View style={styles.contentContainer}>
-          <Text style={styles.subtitle}>Select a group to view details</Text>
-
-          {/* Group Filter */}
+        <View style={styles.container}>
+          {/* FILTER */}
           <View style={styles.dropdownWrapper}>
             <Text style={styles.dropdownLabel}>Filter by Group</Text>
             <View style={styles.pickerWrapper}>
               <Picker
                 selectedValue={selectedGroup}
-                onValueChange={(itemValue) => setSelectedGroup(itemValue)}
-                style={[styles.picker, { color: COLORS.primary }]}
+                onValueChange={(v) => setSelectedGroup(v)}
+                style={[styles.picker, { color: VIOLET_DARK }]}
               >
                 <Picker.Item label="All Groups" value="all" />
                 {groups.map((g) => (
@@ -215,69 +224,65 @@ const ReferredReport = ({ route }) => {
             </View>
           </View>
 
-          {/* Total Summary */}
+          {/* TOTAL SUMMARY */}
           <View style={styles.totalWrapper}>
             <Text style={styles.totalText}>Total Outstanding Balance:</Text>
-            <Text style={styles.totalAmount}>{formatCurrency(totalPending)}</Text>
+            <Text style={styles.totalAmount}>
+              {formatCurrency(totalPending)}
+            </Text>
           </View>
 
           {loading ? (
             <View style={styles.loader}>
-              <ActivityIndicator size="large" color={COLORS.primary} />
-              <Text style={styles.loaderText}>Loading data...</Text>
+              <ActivityIndicator size="large" color={VIOLET_DARK} />
+              <Text style={{ marginTop: 10, color: GREY_TEXT }}>
+                Loading data...
+              </Text>
             </View>
           ) : (
             <FlatList
               data={filteredData}
               renderItem={renderItem}
-              keyExtractor={(item, index) => item?._id?.toString() || index.toString()}
+              keyExtractor={(item, index) =>
+                item?._id?.toString() || index.toString()
+              }
               ListEmptyComponent={EmptyList}
-              contentContainerStyle={{ paddingBottom: 50 }}
+              contentContainerStyle={{ paddingBottom: 80 }}
             />
           )}
         </View>
       </LinearGradient>
-    </SafeAreaView>
+    </View>
   );
 };
 
-export default ReferredReport;
+export default RelationshipManagerReport;
 
 const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    paddingTop: Platform.OS === "ios" ? 50 : 40,
+    paddingBottom: 15,
     paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: "transparent",
   },
   backButton: {
-    padding: 5,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    padding: 8,
     borderRadius: 10,
-    backgroundColor: "rgba(255,255,255,0.15)",
+    marginRight: 10,
   },
   headerTitle: {
     fontSize: 22,
-    fontWeight: "800",
-    color: COLORS.white,
+    fontWeight: "700",
+    color: "#fff",
   },
-  contentContainer: {
+  container: {
     flex: 1,
-    backgroundColor: COLORS.backgroundLight,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
     paddingHorizontal: 16,
-    paddingTop: 20,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: COLORS.textGrey,
-    marginBottom: 20,
-    textAlign: "center",
   },
   dropdownWrapper: {
-    backgroundColor: COLORS.white,
+    backgroundColor: "#fff",
     padding: 15,
     borderRadius: 12,
     marginBottom: 20,
@@ -286,33 +291,31 @@ const styles = StyleSheet.create({
   dropdownLabel: {
     fontWeight: "700",
     marginBottom: 8,
-    color: COLORS.primary,
+    color: VIOLET_DARK,
     fontSize: 16,
   },
   pickerWrapper: {
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: "#e5e7eb",
     borderRadius: 8,
-    backgroundColor: "#F9FAFB",
+    backgroundColor: "#f9fafb",
   },
-  picker: { height: 50 },
   totalWrapper: {
-    backgroundColor: COLORS.white,
-    borderRadius: 12,
-    padding: 16,
-    borderLeftWidth: 5,
-    borderLeftColor: COLORS.accent,
+    backgroundColor: "#ede9fe",
+    borderRadius: 10,
+    padding: 15,
     marginBottom: 20,
-    elevation: 3,
+    borderLeftWidth: 5,
+    borderLeftColor: VIOLET_MEDIUM,
     alignItems: "center",
   },
   totalText: {
-    color: COLORS.textDark,
+    color: VIOLET_DARK,
     fontWeight: "600",
-    fontSize: 16,
+    fontSize: 14,
   },
   totalAmount: {
-    color: COLORS.primary,
+    color: VIOLET_DARK,
     fontWeight: "900",
     fontSize: 24,
   },
@@ -320,71 +323,72 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     marginBottom: 15,
   },
-  cardIndicator: {
+  cardStatusIndicator: {
     width: 6,
     borderTopLeftRadius: 16,
     borderBottomLeftRadius: 16,
   },
   card: {
     flex: 1,
-    backgroundColor: COLORS.white,
+    backgroundColor: "#fff",
     borderTopRightRadius: 16,
     borderBottomRightRadius: 16,
-    padding: 18,
-    marginLeft: -6,
+    padding: 20,
     elevation: 6,
+    marginLeft: -6,
   },
   cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 10,
     borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
+    borderBottomColor: "#f3f4f6",
     paddingBottom: 8,
-    marginBottom: 8,
   },
   groupName: {
     fontSize: 17,
-    fontWeight: "700",
-    color: COLORS.primary,
+    fontWeight: "800",
+    color: VIOLET_DARK,
   },
-  cardBody: {
-    marginBottom: 10,
+  paymentType: {
+    fontSize: 13,
+    color: VIOLET_MEDIUM,
+    fontWeight: "600",
+    backgroundColor: "#ede9fe",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 5,
   },
   customerName: {
     fontSize: 18,
-    fontWeight: "800",
-    color: COLORS.textDark,
-  },
-  customerInfo: {
-    fontSize: 14,
-    color: COLORS.textGrey,
-  },
-  cardFinancial: {
-    paddingTop: 5,
+    fontWeight: "700",
+    color: TEXT_DARK,
+    marginBottom: 10,
   },
   financialRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingVertical: 6,
+    paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
+    borderBottomColor: "#f3f4f6",
   },
   financialLabel: {
     fontSize: 15,
+    color: TEXT_DARK,
     fontWeight: "600",
-    color: COLORS.textDark,
   },
   financialValue: {
     fontSize: 15,
     fontWeight: "700",
-    color: "green",
   },
   balanceRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    marginTop: 10,
+    marginTop: 8,
     borderWidth: 1,
     borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
   },
   balanceLabel: {
     fontSize: 16,
@@ -394,22 +398,24 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: "900",
   },
-  loader: { alignItems: "center", marginTop: 50 },
-  loaderText: { color: COLORS.textGrey, marginTop: 10 },
+  loader: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 50,
+  },
   emptyContainer: {
     alignItems: "center",
-    marginTop: 60,
+    marginTop: 80,
   },
-  emptyImage: { width: 200, height: 160, opacity: 0.8 },
+  emptyImage: {
+    width: 200,
+    height: 160,
+    opacity: 0.8,
+  },
   emptyText: {
-    color: COLORS.textDark,
+    color: "#fff",
     marginTop: 20,
     fontWeight: "700",
     fontSize: 18,
-  },
-  emptySubtext: {
-    color: COLORS.textGrey,
-    marginTop: 5,
-    fontSize: 14,
   },
 });

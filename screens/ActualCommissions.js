@@ -210,7 +210,7 @@ const ActualCommissions = ({ route, navigation }) => {
                                     />
                                 ) : chitCustomerLength === 0 ? (
                                     <Text style={styles.noLeadsText}>
-                                        No CHIT enrolled customers found.
+                                        No CHIT enrolled found.
                                     </Text>
                                 ) : (
                                     <FlatList

@@ -1,167 +1,216 @@
 import React from "react";
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from "react-native";
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  StatusBar,
+  Platform,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Icon from "react-native-vector-icons/FontAwesome";
 import { LinearGradient } from "expo-linear-gradient";
-import Header from "../components/Header";
+import Icon from "react-native-vector-icons/FontAwesome";
+import { Ionicons } from "@expo/vector-icons";
 
 const COLOR_PALETTE = {
-  primary: "#7F00FF", // violet
-  secondary: "#E100FF", // purple-pink
+  primary: "#7C3AED", // violet
+  secondary: "#9B5DE5", // purple-pink
+  accent: "#A78BFA", // lighter violet
   white: "#FFFFFF",
   textDark: "#1A1A1A",
-  textLight: "#666666",
-  accent: "#9C27B0", // deeper violet accent for borders/icons
+  textLight: "#6B6B6B",
 };
 
 const PaymentCard = ({ name, icon, onPress }) => (
-  <TouchableOpacity onPress={onPress} style={styles.card}>
-    <View style={styles.cardContent}>
-      <Icon name={icon} style={styles.cardIcon} />
-      <View style={styles.textContainer}>
-        <Text style={styles.cardText}>{name}</Text>
-        <Text style={styles.cardSubText}>View Payment History</Text>
+  <TouchableOpacity onPress={onPress} activeOpacity={0.85} style={styles.card}>
+    <View style={styles.cardLeft}>
+      <View style={styles.iconContainer}>
+        <Icon name={icon} size={22} color={COLOR_PALETTE.white} />
+      </View>
+      <View>
+        <Text style={styles.cardTitle}>{name}</Text>
+        <Text style={styles.cardSubtitle}>View Payment History</Text>
       </View>
     </View>
-    <Icon name="arrow-right" style={styles.arrowIcon} />
+    <Ionicons name="chevron-forward" size={20} color={COLOR_PALETTE.primary} />
   </TouchableOpacity>
 );
 
 const PaymentList = ({ route, navigation }) => {
-  const { user } = route.params;
+  const { user } = route?.params || {};
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: COLOR_PALETTE.white }}>
+    <View style={{ flex: 1, backgroundColor: COLOR_PALETTE.white }}>
+      {/* Fullscreen violet background including status bar */}
       <LinearGradient
         colors={[COLOR_PALETTE.primary, COLOR_PALETTE.secondary]}
-        style={styles.container}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
+        style={styles.topGradient}
       >
+        {/* Translucent violet status bar */}
+        <StatusBar
+          barStyle="light-content"
+          translucent
+          backgroundColor="transparent"
+        />
+
+        {/* Header */}
+        <SafeAreaView>
+          <View style={styles.headerContainer}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+            >
+              <Ionicons name="arrow-back" size={22} color="#fff" />
+            </TouchableOpacity>
+
+            <View style={styles.headerTextContainer}>
+              <Text style={styles.headerTitle}>Payment Handbook 🧾</Text>
+              <Text style={styles.headerSubtitle}>
+                Select a payment type to continue
+              </Text>
+            </View>
+          </View>
+        </SafeAreaView>
+      </LinearGradient>
+
+      {/* White rounded section below header */}
+      <View style={styles.contentContainer}>
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContainer}
-          showsVerticalScrollIndicator={true}
+          showsVerticalScrollIndicator={false}
         >
-          <Header />
-
-          {/* Page Title */}
-          <View style={styles.titleContainer}>
-            <Text style={styles.title}>Payment HandBook 🧾</Text>
-            <Text style={styles.subtitle}>Select a payment type to continue</Text>
-          </View>
-
-          {/* Payment Options */}
-          <View style={styles.cardListContainer}>
-            <PaymentCard
-              name="Chits Payments Book"
-              icon="money"
-              onPress={() =>
-                navigation.navigate("ChitPayment", { user, areaId: "chits" })
-              }
-            />
-            <PaymentCard
-              name="Gold Chits Payments Book"
-              icon="credit-card"
-              onPress={() =>
-                navigation.navigate("GoldPayment", { user, areaId: "gold-chits" })
-              }
-            />
-            <PaymentCard
-              name="Loan Payments Book"
-              icon="bank"
-              onPress={() =>
-                navigation.navigate("LoanPayments", { user, areaId: "loans" })
-              }
-            />
-            <PaymentCard
-              name="Pigme Payments Book"
-              icon="briefcase"
-              onPress={() =>
-                navigation.navigate("PigmePayments", { user, areaId: "pigmy" })
-              }
-            />
-          </View>
+          <PaymentCard
+            name="Chits Payments Book"
+            icon="money"
+            onPress={() =>
+              navigation.navigate("ChitPayment", { user, areaId: "chits" })
+            }
+          />
+          <PaymentCard
+            name="Gold Chits Payments Book"
+            icon="credit-card"
+            onPress={() =>
+              navigation.navigate("GoldPayment", { user, areaId: "gold-chits" })
+            }
+          />
+          <PaymentCard
+            name="Loan Payments Book"
+            icon="bank"
+            onPress={() =>
+              navigation.navigate("LoanPayments", { user, areaId: "loans" })
+            }
+          />
+          <PaymentCard
+            name="Pigme Payments Book"
+            icon="briefcase"
+            onPress={() =>
+              navigation.navigate("PigmePayments", { user, areaId: "pigmy" })
+            }
+          />
         </ScrollView>
-      </LinearGradient>
-    </SafeAreaView>
+      </View>
+    </View>
   );
 };
 
+export default PaymentList;
+
 const styles = StyleSheet.create({
-  container: {
+  // Full violet gradient area including notch and time
+  topGradient: {
+    height: Platform.OS === "ios" ? 230 : 250,
+    borderBottomLeftRadius: 40,
+    borderBottomRightRadius: 40,
+    elevation: 10,
+    shadowColor: "#7C3AED",
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+  },
+  headerContainer: {
+    marginTop: Platform.OS === "android" ? StatusBar.currentHeight + 20: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 20,
+  },
+  backButton: {
+    position: "absolute",
+    top: 0,
+    left: 20,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    padding: 8,
+    borderRadius: 10,
+  },
+  headerTextContainer: {
+    alignItems: "center",
+  },
+  headerTitle: {
+    fontSize: 26,
+    fontWeight: "bold",
+    color: COLOR_PALETTE.white,
+    textAlign: "center",
+    marginTop: 5,
+  },
+  headerSubtitle: {
+    fontSize: 15,
+    color: "#EDE9FE",
+    marginTop: 6,
+    textAlign: "center",
+  },
+  // White content area
+  contentContainer: {
     flex: 1,
+    backgroundColor: COLOR_PALETTE.white,
+    borderTopLeftRadius: 40,
+    borderTopRightRadius: 40,
+    marginTop: -30,
+    paddingTop: 20,
   },
   scrollView: {
     flex: 1,
-    marginHorizontal: 20,
-    marginTop: 10,
   },
   scrollContainer: {
-    paddingBottom: 80,
-  },
-  titleContainer: {
-    marginTop: 40,
-    marginBottom: 20,
-    alignItems: "center",
-  },
-  title: {
-    fontSize: 30,
-    fontWeight: "bold",
-    color: COLOR_PALETTE.white,
-    letterSpacing: 0.5,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: "#F5F5F5",
-    marginTop: 5,
-  },
-  cardListContainer: {
-    marginTop: 15,
-    gap: 20,
-    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingBottom: 100,
   },
   card: {
     backgroundColor: COLOR_PALETTE.white,
-    borderRadius: 15,
-    padding: 18,
-    width: "92%",
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 18,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    borderLeftWidth: 5,
-    borderColor: COLOR_PALETTE.accent,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 8,
+    elevation: 6,
+    shadowColor: "#7c3aed",
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    borderWidth: 1,
+    borderColor: "#EDE9FE",
   },
-  cardContent: {
+  cardLeft: {
     flexDirection: "row",
     alignItems: "center",
   },
-  textContainer: {
-    marginLeft: 15,
+  iconContainer: {
+    backgroundColor: COLOR_PALETTE.primary,
+    borderRadius: 12,
+    padding: 10,
+    marginRight: 14,
   },
-  cardText: {
-    fontSize: 17,
-    fontWeight: "bold",
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: "700",
     color: COLOR_PALETTE.textDark,
   },
-  cardSubText: {
+  cardSubtitle: {
     fontSize: 13,
     color: COLOR_PALETTE.textLight,
     marginTop: 2,
   },
-  cardIcon: {
-    fontSize: 32,
-    color: COLOR_PALETTE.accent,
-  },
-  arrowIcon: {
-    fontSize: 20,
-    color: COLOR_PALETTE.accent,
-  },
 });
-
-export default PaymentList;

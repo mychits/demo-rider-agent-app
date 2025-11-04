@@ -155,6 +155,8 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.2,
         shadowRadius: 8,
         elevation: 6,
+
+        
     },
     taskTitle: {
         fontSize: 26,

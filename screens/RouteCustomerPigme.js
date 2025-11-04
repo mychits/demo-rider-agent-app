@@ -74,7 +74,7 @@ const RouteCustomerPigme = ({ route, navigation }) => {
             <TouchableOpacity onPress={() => navigation.goBack()}>
               <Icon name="arrow-left" size={22} color="#008000" />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>PIGME CUSTOMERS</Text>
+            <Text style={styles.headerTitle}>PIGMY CUSTOMERS</Text>
             <View style={styles.profileCircle}>
               <Icon name="credit-card" size={20} color="#008000" />
             </View>

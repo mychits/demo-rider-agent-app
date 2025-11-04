@@ -1,132 +1,90 @@
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { MaterialCommunityIcons, Ionicons } from "@expo/vector-icons";
 import { getFocusedRouteNameFromRoute } from "@react-navigation/native";
+import { View, TouchableOpacity, StyleSheet } from "react-native";
+import { enableScreens } from "react-native-screens";
+
 import Home from "../screens/Home";
 import Dashboard from "../screens/Dashboard";
-import COLORS from "../constants/color"; 
 import PaymentNavigator from "./PaymentNavigator";
 import ProfileNavigator from "./ProfileNavigator";
-import { enableScreens } from "react-native-screens";
 import Attendence from "../screens/Attendence";
-import { View, TouchableOpacity, StyleSheet } from "react-native"; 
+import COLORS from "../constants/color";
 
 enableScreens();
 
 const Tab = createBottomTabNavigator();
 
-
-const INACTIVE_COLOR = "#A2B2A7"; 
-const ACTIVE_COLOR = "#DAA520"; 
-const FAB_BACKGROUND_COLOR = "#DAA520"; 
-const ICON_COLOR_ON_FAB = "#FFFFFF"; 
-const BACKGROUND_COLOR = "#445C4B"; 
-const FAB_BORDER_COLOR = "#FFFFFF"; 
-
+// 🎨 Violet Theme Colors
+const INACTIVE_COLOR = "#C8A9FF";
+const ACTIVE_COLOR = "#FFD700";
+const FAB_BACKGROUND_COLOR = "#7F5AF0";
+const ICON_COLOR_ON_FAB = "#FFFFFF";
+const BACKGROUND_COLOR = "#CBB2FE";
+const FAB_BORDER_COLOR = "#E8D9FF";
 
 const screenOptions = {
   tabBarShowLabel: false,
   headerShown: false,
   tabBarHideOnKeyboard: true,
   tabBarStyle: {
-   
     position: "absolute",
-    bottom: 25, 
-    right: 15,
-    left: 15,
-    elevation: 15, 
-    height: 75, 
-    borderRadius: 40, 
-    borderBottomLeftRadius: 10, 
-    borderBottomRightRadius: 10,
-    backgroundColor: BACKGROUND_COLOR, 
-    shadowColor: "#000", 
+    bottom: 20,
+    right: 20,
+    left: 20,
+    elevation: 15,
+    height: 75,
+    borderRadius: 40,
+    backgroundColor: BACKGROUND_COLOR,
+    shadowColor: "#7F5AF0",
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.25,
-    shadowRadius: 15, 
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    borderWidth: 1.5,
+    borderColor: "#E8D9FF",
   },
 };
 
-
 const BottomNavigation = ({ route }) => {
-  const { user, agentInfo } = route.params;
+  const { user, agentInfo } = route.params || {};
 
   const getTabBarStyle = (route) => {
     const routeName = getFocusedRouteNameFromRoute(route) ?? "";
-
     if (
-      routeName === "ViewLeads" ||
-      routeName === "Customer" ||
-      routeName === "ViewEnrollments" ||
-      routeName === "Reports" ||
-      routeName === "Commissions" ||
-      routeName === "Enrollment"
+      [
+        "ViewLeads",
+        "Customer",
+        "ViewEnrollments",
+        "Reports",
+        "Commissions",
+        "Enrollment",
+      ].includes(routeName)
     ) {
       return { display: "none" };
     }
     return null;
   };
 
-
   const ArchIcon = ({ focused, name, size, IconComponent }) => (
-    <View style={{ alignItems: 'center', paddingTop: 8 }}>
-        <IconComponent
-            name={name}
-            size={size}
-            color={focused ? ACTIVE_COLOR : INACTIVE_COLOR}
-        />
-       
-        {focused && (
-            <View style={{
-                height: 3,
-                width: 20,
-                backgroundColor: ACTIVE_COLOR,
-                borderRadius: 2,
-                marginTop: 6, 
-            }} />
-        )}
+    <View style={{ alignItems: "center", paddingTop: 8 }}>
+      <IconComponent
+        name={name}
+        size={size}
+        color={focused ? ACTIVE_COLOR : INACTIVE_COLOR}
+      />
+      {focused && <View style={styles.activeBar} />}
     </View>
   );
 
   const CenterIcon = ({ children, onPress }) => (
-    <TouchableOpacity
-        style={styles.centerFab}
-        onPress={onPress}
-    >
-        <View style={styles.centerFabInner}>
-            {children}
-        </View>
+    <TouchableOpacity style={styles.centerFab} onPress={onPress}>
+      <View style={styles.centerFabInner}>{children}</View>
     </TouchableOpacity>
   );
 
-  const styles = StyleSheet.create({
-    centerFab: {
-      top: -20, 
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    centerFabInner: {
-      width: 70,
-      height: 70,
-      borderRadius: 35,
-      backgroundColor: FAB_BACKGROUND_COLOR,
-      justifyContent: 'center',
-      alignItems: 'center',
-      elevation: 18, 
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 10 },
-      shadowOpacity: 0.3,
-      shadowRadius: 15,
-      borderWidth: 5, 
-      borderColor: FAB_BORDER_COLOR,
-    }
-  });
-
-  
-
   return (
     <Tab.Navigator screenOptions={screenOptions}>
-      
-     
+      {/* 🏠 Home */}
       <Tab.Screen
         name="Home"
         component={Home}
@@ -144,7 +102,7 @@ const BottomNavigation = ({ route }) => {
         })}
       />
 
-      {/* 2. Dashboard Screen */}
+      {/* 📈 Dashboard */}
       <Tab.Screen
         name="Dashboard"
         component={Dashboard}
@@ -154,7 +112,11 @@ const BottomNavigation = ({ route }) => {
           tabBarIcon: ({ focused }) => (
             <ArchIcon
               focused={focused}
-              name={focused ? "chart-areaspline" : "chart-areaspline-variant"}
+              name={
+                focused
+                  ? "chart-areaspline"
+                  : "chart-areaspline-variant"
+              }
               size={28}
               IconComponent={MaterialCommunityIcons}
             />
@@ -162,29 +124,25 @@ const BottomNavigation = ({ route }) => {
         })}
       />
 
-      
+      {/* 🕒 Attendance - Center FAB */}
       <Tab.Screen
         name="Attendence"
         component={Attendence}
         initialParams={{ user, agentInfo }}
         options={({ route }) => ({
           tabBarStyle: getTabBarStyle(route),
-         
-          tabBarButton: (props) => <CenterIcon {...props} />, 
+          tabBarButton: (props) => <CenterIcon {...props} />,
           tabBarIcon: () => (
-            
             <MaterialCommunityIcons
-              name="calendar-clock" 
-              size={32} 
+              name="calendar-clock"
+              size={32}
               color={ICON_COLOR_ON_FAB}
             />
           ),
         })}
       />
 
-    
-
-
+      {/* 💰 Payments */}
       <Tab.Screen
         name="PaymentNavigator"
         component={PaymentNavigator}
@@ -202,7 +160,7 @@ const BottomNavigation = ({ route }) => {
         })}
       />
 
-      {/* 5. Profile Navigator */}
+      {/* ⚙️ Profile */}
       <Tab.Screen
         name="ProfileNavigator"
         component={ProfileNavigator}
@@ -222,5 +180,36 @@ const BottomNavigation = ({ route }) => {
     </Tab.Navigator>
   );
 };
+
+// 💅 Styles
+const styles = StyleSheet.create({
+  centerFab: {
+    top: -25,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  centerFabInner: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: FAB_BACKGROUND_COLOR,
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 20,
+    shadowColor: "#7F5AF0",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.4,
+    shadowRadius: 15,
+    borderWidth: 4,
+    borderColor: FAB_BORDER_COLOR,
+  },
+  activeBar: {
+    height: 3,
+    width: 20,
+    backgroundColor: ACTIVE_COLOR,
+    borderRadius: 2,
+    marginTop: 6,
+  },
+});
 
 export default BottomNavigation;

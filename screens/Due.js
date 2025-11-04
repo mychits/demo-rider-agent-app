@@ -1,148 +1,253 @@
 import React from "react";
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import Icon from "react-native-vector-icons/FontAwesome";
+import { 
+    View, 
+    Text, 
+    ScrollView, 
+    StyleSheet, 
+    TouchableOpacity, 
+    Platform, 
+    StatusBar 
+} from "react-native";
+// Using Feather Icons for a cleaner, modern look
+import Icon from "react-native-vector-icons/Feather"; 
 import { LinearGradient } from "expo-linear-gradient";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import COLORS from "../constants/color";
-import Header from "../components/Header";
+// --- VIOLET THEME CONSTANTS ---
+const VIOLET_COLORS = {
+    primary: "#6C2DC7",     // Main violet
+    secondary: "#9D50BB",    // Gradient accent
+    darkViolet: "#3B1E7A",    // Darkest text/primary color
+    neutralGrey: "#6b7280",  // Neutral grey for subtle text
+    lightBackground: "#F4EEFB", // Very light violet background
+    white: "#FFFFFF",
+    textSubtle: "#E0D6FF",
+    borderLight: "#ddd6fe",  // Light violet border
+    gradientBackground: ["#e0cffc", "#a267e7"], // Light to deep violet gradient (for the card accent)
+    gradientHeader: ["#6C2DC7", "#9D50BB"], // Gradient for Header area
+    cardBorder: "#6C2DC7",
+};
 
-// Custom Card Component with a more attractive, balanced layout
+// --- Custom Card Component with Violet Theme ---
 const CustomRouteCard = ({ name, icon, onPress }) => (
-  <TouchableOpacity onPress={onPress} style={styles.card}>
-    <View style={styles.cardContent}>
-      <Icon name={icon} style={styles.cardIcon} />
-      <View style={styles.textContainer}>
-        <Text style={styles.cardText}>{name}</Text>
-        <Text style={styles.cardSubText}>View detailed report</Text>
-      </View>
-    </View>
-    <Icon name="arrow-right" style={styles.arrowIcon} />
-  </TouchableOpacity>
+    <TouchableOpacity onPress={onPress} style={cardStyles.card}>
+        <LinearGradient 
+            colors={VIOLET_COLORS.gradientBackground}
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 1, y: 0.5 }}
+            style={cardStyles.iconWrapper}
+        >
+            <Icon name={icon} style={cardStyles.cardIcon} />
+        </LinearGradient>
+        
+        <View style={cardStyles.textContainer}>
+            <Text style={cardStyles.cardText} numberOfLines={2}>{name}</Text>
+            <Text style={cardStyles.cardSubText}>View detailed outstanding data</Text>
+        </View>
+        <Icon name="chevron-right" style={cardStyles.arrowIcon} />
+    </TouchableOpacity>
 );
 
 const Due = ({ route, navigation }) => {
-  // Defensive destructuring remains in place to prevent the previous crash
-  const { user} = route.params 
+    // Defensive destructuring 
+    const { user } = route.params;
 
+    // Handler for the back button
+    const handleBackPress = () => {
+        if (navigation.canGoBack()) {
+            navigation.goBack();
+        } else {
+            console.log("Cannot go back. Add alternative navigation here.");
+        }
+    };
 
-
-  // Removed the navigateToDueReport function and replaced calls below
-  // to navigate directly to the specific report screens.
-
-  return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.white }}>
-      <LinearGradient
-        colors={['#dbf6faff', '#90dafcff']}
-        style={styles.gradientOverlay}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <ScrollView
-          style={{ flex: 1, marginHorizontal: 22, marginTop: 12 }}
-          contentContainerStyle={{ paddingBottom: 80 }}
-          showsVerticalScrollIndicator={false}
-        >
-          <Header />
-          <View style={styles.titleContainer}>
-          
-            <Text style={styles.title}>Outstanding Reports</Text>
-            <Text style={styles.subtitle}>Select a report type to view outstanding data</Text>
-          </View>
-          <View style={styles.cardListContainer}>
-          
-            <CustomRouteCard
-             
-              name="Collection Report"
-              icon="inbox" 
-              onPress={() => navigation.navigate("OutstandingReports", { user})}
-            />
-            <CustomRouteCard
-             
-              name="Referred Report"
-              icon="share-alt" 
-              onPress={() => navigation.navigate("ReferredReport", { user})}
-            />
-            <CustomRouteCard
-             
-              name="Group Report"
-              icon="users" 
-              onPress={() => navigation.navigate("GroupReport", { user})}
-            />
+    return (
+        <SafeAreaView style={styles.mainContainer}>
+            <StatusBar barStyle="light-content" backgroundColor={VIOLET_COLORS.primary} />
             
-          </View>
-        </ScrollView>
-      </LinearGradient>
-    </SafeAreaView>
-  );
+            {/* Top Gradient Header Area */}
+            <LinearGradient 
+                colors={VIOLET_COLORS.gradientHeader} 
+                style={styles.headerGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+            >
+                {/* Custom Header with Back Button and Simple Title */}
+                <View style={styles.customHeader}>
+                    {/* Back Button (Circle Formation) */}
+                    <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
+                        <Icon name="arrow-left" size={20} color={VIOLET_COLORS.primary} />
+                    </TouchableOpacity>
+
+                    {/* Simple Professional Title */}
+                    <Text style={styles.appTitle}>Reports</Text>
+
+                    {/* Placeholder to balance the layout */}
+                    <View style={styles.backButtonPlaceholder} /> 
+                </View>
+
+                {/* Main Title Section */}
+                <View style={styles.titleContainer}>
+                    <Text style={styles.title}>Outstanding Reports</Text>
+                    <Text style={styles.subtitle}>Select a report type to manage dues</Text>
+                </View>
+            </LinearGradient>
+
+            {/* Scrollable Content Area */}
+            <ScrollView
+                style={styles.scrollView}
+                contentContainerStyle={styles.scrollViewContent}
+                showsVerticalScrollIndicator={false}
+            >
+                <View style={styles.cardListContainer}>
+                    <CustomRouteCard
+                        name="Collection Report"
+                        icon="file-text" 
+                        onPress={() => navigation.navigate("OutstandingReports", { user })}
+                    />
+                    <CustomRouteCard
+                        name="Referred Report"
+                        icon="users" 
+                        onPress={() => navigation.navigate("ReferredReport", { user })}
+                    />
+                    <CustomRouteCard
+                        name="Relationship Manager Report"
+                        icon="briefcase" 
+                        onPress={() => navigation.navigate("RelationshipManagerReport", { user })}
+                    />
+                </View>
+            </ScrollView>
+        </SafeAreaView>
+    );
 };
 
+// =================================================================
+// PAGE-LEVEL STYLES
+// =================================================================
 const styles = StyleSheet.create({
-  gradientOverlay: {
-    flex: 1,
-  },
-  titleContainer: {
-    marginTop: 40,
-    marginBottom: 20,
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 5,
-     textAlign: 'center',
-  },
-  cardListContainer: {
-    marginTop: 15,
-    gap: 20,
-    alignItems: 'center',
-  },
-  card: {
-    backgroundColor: COLORS.white,
-    borderRadius: 15,
-    padding: 20,
-    width: '90%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderLeftWidth: 5,
-    borderColor: '#da8201', // Gold color for the accent border
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 10,
-  },
-  cardContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  textContainer: {
-    marginLeft: 15,
-  },
-  cardText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  cardSubText: {
-    fontSize: 14,
-    color: '#888',
-    marginTop: 2,
-  },
-  cardIcon: {
-    fontSize: 25,
-    color: '#da8201',
-  },
-  arrowIcon: {
-    fontSize: 22,
-    color: '#da8201',
-  },
+    mainContainer: {
+        flex: 1,
+        backgroundColor: VIOLET_COLORS.lightBackground,
+    },
+    headerGradient: {
+        paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + 10 : 0,
+        paddingBottom: 25,
+        paddingHorizontal: 22,
+    },
+    
+    // --- CUSTOM HEADER STYLES ---
+    customHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 10,
+    },
+    backButton: {
+        width: 36,
+        height: 36,
+        borderRadius: 18, // Circle formation
+        backgroundColor: VIOLET_COLORS.white,
+        alignItems: 'center',
+        justifyContent: 'center',
+        // Subtle shadow for the floating circle button
+        shadowColor: VIOLET_COLORS.darkViolet,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 3,
+        elevation: 4,
+    },
+    // Placeholder to align the title center when a back button is present
+    backButtonPlaceholder: { 
+        width: 36, 
+        height: 36, 
+        opacity: 0 
+    }, 
+    appTitle: {
+        fontSize: 18,
+        fontWeight: "bold",
+        color: VIOLET_COLORS.white,
+    },
+    // ----------------------------
+
+    titleContainer: {
+        alignItems: 'center',
+        marginTop: 10,
+    },
+    title: {
+        fontSize: 28,
+        fontWeight: '900',
+        color: VIOLET_COLORS.white,
+    },
+    subtitle: {
+        fontSize: 16,
+        color: VIOLET_COLORS.textSubtle, 
+        marginTop: 5,
+        textAlign: 'center',
+    },
+    scrollView: {
+        flex: 1,
+    },
+    scrollViewContent: {
+        paddingHorizontal: 22,
+        paddingTop: 20, 
+        paddingBottom: 40,
+    },
+    cardListContainer: {
+        gap: 15,
+        
+    },
+});
+
+// =================================================================
+// CARD-LEVEL STYLES (Kept consistent)
+// =================================================================
+const cardStyles = StyleSheet.create({
+    card: {
+        backgroundColor: VIOLET_COLORS.white,
+        borderRadius: 15,
+        padding: 20,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        width: '100%',
+        shadowColor: VIOLET_COLORS.darkViolet,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 6,
+    },
+    iconWrapper: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    cardIcon: {
+        fontSize: 22,
+        color: VIOLET_COLORS.white,
+    },
+    textContainer: {
+        flex: 1,
+        marginLeft: 15,
+    },
+    cardText: {
+        fontSize: 17,
+        fontWeight: 'bold',
+        color: VIOLET_COLORS.darkViolet,
+    },
+    cardSubText: {
+        fontSize: 13,
+        color: VIOLET_COLORS.neutralGrey,
+        marginTop: 2,
+    },
+    arrowIcon: {
+        fontSize: 20,
+        color: VIOLET_COLORS.primary,
+        marginLeft: 10,
+    },
 });
 
 export default Due;
+
+

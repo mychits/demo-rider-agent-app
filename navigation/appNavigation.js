@@ -12,6 +12,7 @@ import PaymentList from "../screens/PaymentList";
 import PayNavigation from "./PayNavigation";
 import { StatusBar } from "react-native";
 import AddCustomer from "../screens/AddCustomer";
+
 import ViewCustomer from "../screens/ViewCustomer";
 import CustomerNavigation from "./CustomerNavigation";
 import ForgotPassword from "../screens/ForgotPassword";
@@ -44,6 +45,7 @@ import ReferredReport from "../screens/ReferredReport";
 import Due from "../screens/Due";
 import OutstandingReports from "../screens/OutstandingReports";
 import EnrollCustomer from "../screens/EnrollCustomer";
+import RelationshipManagerReport from "../screens/RelationshipManagerReport";
 enableScreens();
 
 const Stack = createNativeStackNavigator();
@@ -146,6 +148,11 @@ export default function AppNavigation() {
           options={{ headerShown: false }}
           component={CustomerNavigation}
         />
+        <Stack.Screen
+          name="RelationshipManagerReport"
+          options={{ headerShown: false }}
+          component={RelationshipManagerReport}
+          />
         <Stack.Screen name="ForgotPassword" component={ForgotPassword} options={{ headerShown: false }} />
         <Stack.Screen name="ResetPassword" component={ResetPassword} options={{ headerShown: false }} />
         <Stack.Screen name="MyTasks" options={{ headerShown: false }} component={MyTaskListScreen} />

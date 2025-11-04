@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,9 +6,12 @@ import {
   StyleSheet,
   TouchableOpacity,
   Platform,
+  Animated, // <-- Import Animated
+  Easing,   // <-- Import Easing for smooth transitions
 } from "react-native";
 import Icon from "react-native-vector-icons/FontAwesome";
 import { LinearGradient } from "expo-linear-gradient";
+// Assuming Header component is in '../components/Header'
 import Header from "../components/Header";
 
 const COLORS = {
@@ -22,31 +25,104 @@ const COLORS = {
   textSubtle: "#E0D6FF",
 };
 
-// Reusable Card Component
-const CustomRouteCard = ({ name, icon, onPress }) => (
-  <TouchableOpacity onPress={onPress} activeOpacity={0.85} style={styles.card}>
-    <View style={styles.cardContent}>
-      <LinearGradient
-        colors={[COLORS.primary, COLORS.secondary]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.iconContainer}
-      >
-        <Icon name={icon} style={styles.cardIcon} />
-      </LinearGradient>
+// --- Dynamic Data for Routes ---
+const ROUTE_OPTIONS = [
+  { name: "Chits Customers", icon: "users", screen: "RouteCustomerChit", areaId: "chits" },
+  { name: "Gold Chits Customers", icon: "diamond", screen: "RouteCustomerGold", areaId: "gold-chits" },
+  { name: "Loan Customers", icon: "money", screen: "RouteCustomerLoan", areaId: "loan-customer" },
+  { name: "Pigmy Customers", icon: "credit-card", screen: "RouteCustomerPigme", areaId: "pigmy-customer" },
+];
 
-      <View style={styles.textContainer}>
-        <Text style={styles.cardText}>{name}</Text>
-        <Text style={styles.cardSubText}>View customer details</Text>
-      </View>
-    </View>
+// --- Animated CustomRouteCard Component ---
+const AnimatedRouteCard = ({ name, icon, onPress, index }) => {
+  // Animated value for each card's opacity and vertical position
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
 
-    <Icon name="angle-right" style={styles.arrowIcon} />
-  </TouchableOpacity>
-);
+  useEffect(() => {
+    // Staggered animation for card visibility
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1, // Fade to full opacity
+        duration: 500,
+        delay: index * 120 + 300, // Staggered delay based on index
+        easing: Easing.ease,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0, // Slide up to final position
+        duration: 600,
+        delay: index * 120 + 300,
+        easing: Easing.out(Easing.back(1.1)), // Added a bounce effect
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [fadeAnim, slideAnim, index]);
 
+  const animatedStyle = {
+    opacity: fadeAnim,
+    transform: [{ translateY: slideAnim }],
+  };
+
+  return (
+    <Animated.View style={[styles.cardWrapper, animatedStyle]}>
+      <TouchableOpacity onPress={onPress} activeOpacity={0.85} style={styles.card}>
+        <View style={styles.cardContent}>
+          <LinearGradient
+            colors={[COLORS.primary, COLORS.secondary]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.iconContainer}
+          >
+            <Icon name={icon} style={styles.cardIcon} />
+          </LinearGradient>
+
+          <View style={styles.textContainer}>
+            <Text style={styles.cardText}>{name}</Text>
+            <Text style={styles.cardSubText}>View customer details</Text>
+          </View>
+        </View>
+
+        <Icon name="angle-right" style={styles.arrowIcon} />
+      </TouchableOpacity>
+    </Animated.View>
+  );
+};
+
+// --- Routes Component (Main Screen) ---
 const Routes = ({ route, navigation }) => {
-  const { user } = route.params;
+  const user = route.params?.user || {};
+
+  const handleCardPress = (option) => {
+    navigation.navigate(option.screen, { user, areaId: option.areaId });
+  };
+
+  // Animation for the Title/Subtitle block
+  const titleOpacityAnim = useRef(new Animated.Value(0)).current;
+  const titleSlideAnim = useRef(new Animated.Value(-20)).current;
+
+  useEffect(() => {
+    // Title animation runs immediately on mount
+    Animated.parallel([
+      Animated.timing(titleOpacityAnim, {
+        toValue: 1,
+        duration: 800,
+        easing: Easing.ease,
+        useNativeDriver: true,
+      }),
+      Animated.timing(titleSlideAnim, {
+        toValue: 0,
+        duration: 800,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [titleOpacityAnim, titleSlideAnim]);
+
+  const animatedTitleStyle = {
+    opacity: titleOpacityAnim,
+    transform: [{ translateY: titleSlideAnim }],
+  };
 
   return (
     <View style={{ flex: 1 }}>
@@ -65,54 +141,25 @@ const Routes = ({ route, navigation }) => {
             <Header />
           </View>
 
-          <View style={styles.titleContainer}>
+          {/* Animated Title Container */}
+          <Animated.View style={[styles.titleContainer, animatedTitleStyle]}>
             <Text style={styles.title}>Customer Portfolio Overview</Text>
             <Text style={styles.subtitle}>
               Analyze your customer categories and performance data
             </Text>
-          </View>
+          </Animated.View>
 
+          {/* Dynamic Animated Card List */}
           <View style={styles.cardListContainer}>
-            <CustomRouteCard
-              name="Chits Customers"
-              icon="users"
-              onPress={() =>
-                navigation.navigate("RouteCustomerChit", {
-                  user,
-                  areaId: "chits",
-                })
-              }
-            />
-            <CustomRouteCard
-              name="Gold Chits Customers"
-              icon="diamond"
-              onPress={() =>
-                navigation.navigate("RouteCustomerGold", {
-                  user,
-                  areaId: "gold-chits",
-                })
-              }
-            />
-            <CustomRouteCard
-              name="Loan Customers"
-              icon="money"
-              onPress={() =>
-                navigation.navigate("RouteCustomerLoan", {
-                  user,
-                  areaId: "loan-customer",
-                })
-              }
-            />
-            <CustomRouteCard
-              name="Pigme Customers"
-              icon="credit-card"
-              onPress={() =>
-                navigation.navigate("RouteCustomerPigme", {
-                  user,
-                  areaId: "pigmy-customer",
-                })
-              }
-            />
+            {ROUTE_OPTIONS.map((option, index) => (
+              <AnimatedRouteCard
+                key={option.areaId} // Unique key
+                name={option.name}
+                icon={option.icon}
+                index={index} // Pass index for staggered delay
+                onPress={() => handleCardPress(option)}
+              />
+            ))}
           </View>
         </ScrollView>
       </LinearGradient>
@@ -120,6 +167,7 @@ const Routes = ({ route, navigation }) => {
   );
 };
 
+// --- Stylesheet (Updated to accommodate the card wrapper) ---
 const styles = StyleSheet.create({
   gradientOverlay: {
     flex: 1,
@@ -160,6 +208,11 @@ const styles = StyleSheet.create({
   cardListContainer: {
     marginTop: 25,
     gap: 18,
+    alignItems: "center",
+  },
+  // Wrapper for the Animated card
+  cardWrapper: {
+    width: "100%", 
     alignItems: "center",
   },
   card: {

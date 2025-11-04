@@ -10,24 +10,21 @@ import {
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Header from "../components/Header";
-import {
-  Ionicons,
-  FontAwesome5,
-  MaterialCommunityIcons,
-} from "@expo/vector-icons";
+import { Ionicons, FontAwesome5, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import chitBaseUrl from "../constants/baseUrl";
+import { useNavigation } from "@react-navigation/native";
 
 const CustomerOnHold = () => {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [agent, setAgent] = useState(null);
+  const navigation = useNavigation();
 
-  // ✅ Fetch agent details from AsyncStorage → then fetch agent info from API
+  // ✅ Fetch agent details
   useEffect(() => {
     const fetchAgentById = async () => {
       try {
@@ -37,9 +34,8 @@ const CustomerOnHold = () => {
           setLoading(false);
           return;
         }
-
         const parsedAgent = JSON.parse(storedAgentInfo);
-        const agentId = parsedAgent?._id; // ✅ agentId from AsyncStorage
+        const agentId = parsedAgent?._id;
 
         if (!agentId) {
           setError("Agent ID not found in stored info.");
@@ -47,10 +43,7 @@ const CustomerOnHold = () => {
           return;
         }
 
-        // Fetch agent from backend
-        const response = await axios.get(
-          `${chitBaseUrl}/agent/get-agent-by-id/${agentId}`
-        );
+        const response = await axios.get(`${chitBaseUrl}/agent/get-agent-by-id/${agentId}`);
         setAgent(response.data);
       } catch (error) {
         console.error("Error fetching agent data:", error);
@@ -62,7 +55,7 @@ const CustomerOnHold = () => {
     fetchAgentById();
   }, []);
 
-  // ✅ Fetch customers on hold when agent is loaded
+  // ✅ Fetch customers on hold
   useEffect(() => {
     if (!agent || !agent._id) return;
 
@@ -82,9 +75,7 @@ const CustomerOnHold = () => {
         setCustomers(formattedCustomers);
       } catch (err) {
         console.error("Failed to fetch customers:", err);
-        setError(
-          "Failed to load customer information. Please check your network and try again."
-        );
+        setError("Failed to load customer information. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -93,7 +84,7 @@ const CustomerOnHold = () => {
     fetchCustomersOnHold();
   }, [agent]);
 
-  // -------- helper functions for call, email, whatsapp ----------
+  // ---------- Helper functions ----------
   const handleCall = async (phoneNumber) => {
     try {
       const url = `tel:${phoneNumber}`;
@@ -107,11 +98,9 @@ const CustomerOnHold = () => {
   const handleEmail = async (email, customerName) => {
     try {
       const subject = "Regarding your pending Chit payment";
-      const body = `Dear ${customerName},\n\nWe noticed that your recent chit payment is still pending for the group\n\nTo continue your participation and avoid any interruptions, please complete the payment at your earliest convenience.\n\nThank you for your cooperation.\n\nSincerely,\nMyChits Team`;
+      const body = `Dear ${customerName},\n\nWe noticed that your recent chit payment is still pending.\nPlease complete the payment at your earliest convenience.\n\nThank you,\nMyChits Team`;
 
-      const url = `mailto:${email}?subject=${encodeURIComponent(
-        subject
-      )}&body=${encodeURIComponent(body)}`;
+      const url = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
       await Linking.openURL(url);
     } catch (error) {
       console.error("Failed to open email client:", error);
@@ -150,21 +139,23 @@ const CustomerOnHold = () => {
           style={[styles.contactButton, styles.callButton]}
           onPress={() => handleCall(customer.phoneNumber)}
         >
-          <Ionicons name="call" size={15} color="#fff" />
+          <Ionicons name="call" size={15} color="blue" />
           <Text style={styles.buttonText}>Call</Text>
         </TouchableOpacity>
+
         <TouchableOpacity
           style={[styles.contactButton, styles.whatsappButton]}
           onPress={() => handleWhatsApp(customer.phoneNumber)}
         >
-          <FontAwesome5 name="whatsapp" size={15} color="#fff" />
+          <FontAwesome5 name="whatsapp" size={20} color="#25D366" />
           <Text style={styles.buttonText}>WhatsApp</Text>
         </TouchableOpacity>
+
         <TouchableOpacity
           style={[styles.contactButton, styles.emailButton]}
           onPress={() => handleEmail(customer.email, customer.name)}
         >
-          <MaterialCommunityIcons name="email" size={15} color="#fff" />
+          <MaterialCommunityIcons name="email" size={15} color="#d32626ff" />
           <Text style={styles.buttonText}>Email</Text>
         </TouchableOpacity>
       </View>
@@ -173,24 +164,34 @@ const CustomerOnHold = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      {/* Violet Header */}
       <LinearGradient
-        colors={["#dbf6faff", "#90dafcff"]}
-        style={styles.gradientOverlay}
+        colors={["#7b2cbf", "#9d4edd"]}
+        style={styles.headerContainer}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
+        <View style={styles.headerContent}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Customers On Hold</Text>
+          <View style={{ width: 24 }} /> 
+        </View>
+      </LinearGradient>
+
+      {/* Body */}
+      <LinearGradient
+        colors={["#f9f7fc", "#e8e3f0"]}
+        style={styles.gradientOverlay}
+      >
         <View style={styles.mainContentArea}>
-          <Header />
-          <Text style={styles.screenTitle}>Customers On Hold</Text>
           <Text style={styles.instructionText}>
             Follow up with these customers to resolve their hold status.
           </Text>
+
           {loading ? (
-            <ActivityIndicator
-              size="large"
-              color="#007bff"
-              style={styles.loader}
-            />
+            <ActivityIndicator size="large" color="#7b2cbf" style={styles.loader} />
           ) : error ? (
             <Text style={styles.statusText}>{error}</Text>
           ) : (
@@ -211,25 +212,40 @@ const CustomerOnHold = () => {
 };
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1 },
+  safeArea: { flex: 1, backgroundColor: "#fff" },
+  headerContainer: {
+    paddingVertical: 18,
+    paddingHorizontal: 15,
+    borderBottomLeftRadius: 25,
+    borderBottomRightRadius: 25,
+    elevation: 5,
+    backgroundColor: "#250347ff"
+  },
+  headerContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    
+
+  },
+  backButton: {
+    padding: 5,
+  },
+  headerTitle: {
+    color: "#fff",
+    fontSize: 20,
+    fontWeight: "bold",
+  },
   gradientOverlay: { flex: 1 },
   mainContentArea: {
     flex: 1,
     paddingHorizontal: 20,
     marginTop: 15,
   },
-  screenTitle: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#2C3E50",
-    marginTop: 20,
-    marginBottom: 5,
-    textAlign: "center",
-  },
   instructionText: {
     fontSize: 14,
-    color: "#7F8C8D",
-    marginBottom: 25,
+    color: "#555",
+    marginBottom: 20,
     textAlign: "center",
   },
   loader: { marginTop: 50 },
@@ -241,7 +257,7 @@ const styles = StyleSheet.create({
   },
   cardsScrollViewContent: { paddingBottom: 20 },
   card: {
-    backgroundColor: "#e8f4faff",
+    backgroundColor: "#ffffff",
     borderRadius: 15,
     padding: 20,
     marginBottom: 15,
@@ -249,9 +265,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 6,
-    elevation: 8,
+    elevation: 5,
     borderLeftWidth: 5,
-    borderColor: "#da8201",
+    borderColor: "#7A28CB",
   },
   cardHeader: {
     flexDirection: "row",
@@ -260,10 +276,10 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   customerName: { fontSize: 20, fontWeight: "bold", color: "#000" },
-  groupType: { fontSize: 16, fontWeight: "bold", color: "#333" },
+  groupType: { fontSize: 16, fontWeight: "bold", color: "#7A28CB" },
   cardBody: { marginBottom: 15 },
-  groupName: { fontSize: 16, color: "#777", fontWeight: "400" },
-  phoneNumber: { fontSize: 16, color: "#000", fontWeight: "500", marginTop: 5 },
+  groupName: { fontSize: 16, color: "red", fontWeight: "400" },
+  phoneNumber: { fontSize: 16, color: "green", fontWeight: "500", marginTop: 5 },
   buttonContainer: {
     flexDirection: "row",
     justifyContent: "flex-start",
@@ -275,19 +291,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 7,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     borderRadius: 50,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    gap: 8,
+    elevation: 3,
+    gap: 6,
   },
-  callButton: { backgroundColor: "#ff8c00" },
-  whatsappButton: { backgroundColor: "#25D366" },
-  emailButton: { backgroundColor: "#3498db" },
-  buttonText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
+  callButton: { backgroundColor: "#fff" },
+  whatsappButton: { backgroundColor: "#fff" },
+  emailButton: { backgroundColor: "#fff" },
+  buttonText: { color: "#000", fontWeight: "italic", fontSize: 15 },
 });
 
 export default CustomerOnHold;

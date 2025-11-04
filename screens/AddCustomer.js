@@ -9,35 +9,33 @@ import {
   ScrollView,
   TouchableOpacity,
   ToastAndroid,
+  ActivityIndicator,
   LayoutAnimation,
   UIManager,
 } from "react-native";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import axios from "axios";
+import Feather from "react-native-vector-icons/Feather";
+import { LinearGradient } from "expo-linear-gradient";
+import { Picker } from "@react-native-picker/picker";
+import * as Contacts from "expo-contacts";
+
 import COLORS from "../constants/color";
 import chitBaseUrl from "../constants/baseUrl";
 import goldBaseUrl from "../constants/goldBaseUrl";
-import { Picker } from "@react-native-picker/picker";
-import Feather from "react-native-vector-icons/Feather";
 
-// Enable LayoutAnimation on Android
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
 const AddCustomer = ({ route, navigation }) => {
   const { user } = route.params;
-  const [receipt, setReceipt] = useState({});
+
+  const [isQuickAdd, setIsQuickAdd] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedCustomerType, setSelectedCustomerType] = useState("chit");
   const [focusedInput, setFocusedInput] = useState(null);
-
-  const [expandedSections, setExpandedSections] = useState({
-    personal: true,
-    address: false,
-    ids: false,
-  });
 
   const [customerInfo, setCustomerInfo] = useState({
     full_name: "",
@@ -50,51 +48,83 @@ const AddCustomer = ({ route, navigation }) => {
     pan_no: "",
   });
 
-  useEffect(() => {
-    const fetchReceipt = async () => {
-      try {
-        const response = await axios.get(
-          `${chitBaseUrl}/agent/get-agent-by-id/${user.userId}`
-        );
-        setReceipt(response.data);
-      } catch (error) {
-        console.error("Error fetching agent data:", error);
-      }
-    };
-    fetchReceipt();
-  }, []);
-
-  const toggleSection = (section) => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }));
-  };
-
   const handleInputChange = (field, value) => {
     setCustomerInfo({ ...customerInfo, [field]: value });
   };
 
+  const toggleAddMode = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setIsQuickAdd(!isQuickAdd);
+  };
+
+  const showCustomToast = (msg) => {
+    ToastAndroid.show(msg, ToastAndroid.SHORT);
+  };
+
+  // ✅ Contact Picker (One button below fields)
+  const handlePickContact = async () => {
+    const { status } = await Contacts.requestPermissionsAsync();
+    if (status !== "granted") {
+      showCustomToast("Permission to access contacts was denied.");
+      return;
+    }
+
+    try {
+      const contact = await Contacts.presentContactPickerAsync();
+      if (!contact) return;
+
+      const name = contact.name ?? "";
+      const phoneNumbers = contact.phoneNumbers;
+      let phone = "";
+      if (phoneNumbers && phoneNumbers.length > 0) {
+        phone = phoneNumbers[0].number.replace(/\D/g, "");
+      }
+
+      setCustomerInfo((prev) => ({
+        ...prev,
+        full_name: name || prev.full_name,
+        phone_number: phone || prev.phone_number,
+      }));
+
+      showCustomToast("Contact selected successfully.");
+    } catch (err) {
+      console.error("Error picking contact:", err);
+      showCustomToast("Failed to pick contact.");
+    }
+  };
+
+  // ✅ Handle Add Customer
   const handleAddCustomer = async () => {
     setIsLoading(true);
     const baseUrl =
       selectedCustomerType === "chit" ? `${chitBaseUrl}` : `${goldBaseUrl}`;
 
-    // Validation
-    if (
-      !customerInfo.full_name ||
-      !customerInfo.phone_number ||
-      !customerInfo.email ||
-      !customerInfo.password ||
-      !customerInfo.address ||
-      !customerInfo.pincode ||
-      !customerInfo.adhaar_no
-    ) {
-      Alert.alert("Required", "All fields must be filled.");
+    if (!customerInfo.full_name || !customerInfo.phone_number || !customerInfo.password) {
+      Alert.alert("Required", "Full Name, Phone Number, and Password are required.");
       setIsLoading(false);
       return;
     }
 
     if (customerInfo.phone_number.length !== 10) {
-      ToastAndroid.show("Invalid Phone Number", ToastAndroid.SHORT);
+      showCustomToast("Invalid Phone Number");
+      setIsLoading(false);
+      return;
+    }
+
+    if (!selectedCustomerType) {
+      showCustomToast("Please select a Customer Type");
+      setIsLoading(false);
+      return;
+    }
+
+    if (
+      !isQuickAdd &&
+      (!customerInfo.email ||
+        !customerInfo.address ||
+        !customerInfo.pincode ||
+        !customerInfo.adhaar_no)
+    ) {
+      Alert.alert("Required", "Please fill all mandatory fields in detailed form.");
       setIsLoading(false);
       return;
     }
@@ -104,10 +134,7 @@ const AddCustomer = ({ route, navigation }) => {
       const response = await axios.post(`${baseUrl}/user/add-user`, data);
 
       if (response.status === 201) {
-        ToastAndroid.show(
-          "Customer Added Successfully!",
-          ToastAndroid.SHORT
-        );
+        showCustomToast("Customer Added Successfully!");
         setCustomerInfo({
           full_name: "",
           phone_number: "",
@@ -123,10 +150,7 @@ const AddCustomer = ({ route, navigation }) => {
       }
     } catch (error) {
       console.error("Error adding customer:", error.message);
-      Alert.alert(
-        "Error",
-        error?.response?.data?.message || "Something went wrong."
-      );
+      Alert.alert("Error", error?.response?.data?.message || "Something went wrong.");
     } finally {
       setIsLoading(false);
     }
@@ -135,145 +159,90 @@ const AddCustomer = ({ route, navigation }) => {
   return (
     <SafeAreaView style={styles.safeArea}>
       {/* Header */}
-      <View style={styles.headerContainer}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
-        >
+      <LinearGradient colors={["#6C4AB6", "#8E7CC3"]} style={styles.headerContainer}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Feather name="arrow-left" size={22} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Add Customer</Text>
+
+        <Text style={styles.headerTitle}>
+          {isQuickAdd ? "Quick Add Customer" : "Detailed Add Customer"}
+        </Text>
+
         <TouchableOpacity
           onPress={() => navigation.navigate("Customer", { user })}
           style={styles.myCustomersButton}
         >
           <Text style={styles.myCustomersButtonText}>My Customers</Text>
         </TouchableOpacity>
-      </View>
+      </LinearGradient>
 
-      <ScrollView
-        contentContainerStyle={{ paddingBottom: 30 }}
-        keyboardShouldPersistTaps="handled"
-      >
+      {/* Main Form */}
+      <ScrollView contentContainerStyle={{ paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={{ flex: 1 }}
         >
           <View style={styles.formCard}>
+            {/* Toggle Mode Button */}
+            <TouchableOpacity style={styles.toggleButton} onPress={toggleAddMode}>
+              <Feather
+                name={isQuickAdd ? "list" : "zap"}
+                size={16}
+                color="#6C4AB6"
+                style={{ marginRight: 6 }}
+              />
+              <Text style={styles.toggleButtonText}>
+                {isQuickAdd ? "Switch to Detailed Add" : "Switch to Quick Add"}
+              </Text>
+            </TouchableOpacity>
+                  {/* ✅ Contact Button */}
+            <TouchableOpacity style={styles.contactButton} onPress={handlePickContact}>
+              <Feather name="book" size={16} color="#" style={{ marginRight: 8 }} />
+              <Text style={styles.contactButtonText}>Select From Contact</Text>
+            </TouchableOpacity>
+            {/* Full Name */}
+            <InputField
+              label="Full Name"
+              icon="user"
+              required
+              value={customerInfo.full_name}
+              onChangeText={(v) => handleInputChange("full_name", v)}
+              focused={focusedInput === "full_name"}
+              onFocus={() => setFocusedInput("full_name")}
+              onBlur={() => setFocusedInput(null)}
+            />
 
-            {/* Personal Info Section */}
-            <AccordionSection
-              title="Personal Info"
-              expanded={expandedSections.personal}
-              onToggle={() => toggleSection("personal")}
-            >
-              <InputField
-                label="Full Name"
-                icon="user"
-                required
-                value={customerInfo.full_name}
-                onChangeText={(v) => handleInputChange("full_name", v)}
-                focused={focusedInput === "full_name"}
-                onFocus={() => setFocusedInput("full_name")}
-                onBlur={() => setFocusedInput(null)}
-              />
-              <InputField
-                label="Email"
-                icon="mail"
-                required
-                value={customerInfo.email}
-                keyboardType="email-address"
-                onChangeText={(v) => handleInputChange("email", v)}
-                focused={focusedInput === "email"}
-                onFocus={() => setFocusedInput("email")}
-                onBlur={() => setFocusedInput(null)}
-              />
-              <View style={styles.row}>
-                <View style={styles.column}>
-                  <InputField
-                    label="Phone"
-                    icon="phone"
-                    required
-                    value={customerInfo.phone_number}
-                    keyboardType="number-pad"
-                    onChangeText={(v) => handleInputChange("phone_number", v)}
-                    focused={focusedInput === "phone_number"}
-                    onFocus={() => setFocusedInput("phone_number")}
-                    onBlur={() => setFocusedInput(null)}
-                  />
-                </View>
-                <View style={styles.column}>
-                  <InputField
-                    label="Password"
-                    icon="lock"
-                    required
-                    value={customerInfo.password}
-                    secureTextEntry
-                    onChangeText={(v) => handleInputChange("password", v)}
-                    focused={focusedInput === "password"}
-                    onFocus={() => setFocusedInput("password")}
-                    onBlur={() => setFocusedInput(null)}
-                  />
-                </View>
-              </View>
-            </AccordionSection>
+            {/* Phone Number */}
+            <InputField
+              label="Phone Number"
+              icon="phone"
+              required
+              keyboardType="number-pad"
+              value={customerInfo.phone_number}
+              onChangeText={(v) => handleInputChange("phone_number", v)}
+              focused={focusedInput === "phone_number"}
+              onFocus={() => setFocusedInput("phone_number")}
+              onBlur={() => setFocusedInput(null)}
+            />
 
-            {/* Address Section */}
-            <AccordionSection
-              title="Address Info"
-              expanded={expandedSections.address}
-              onToggle={() => toggleSection("address")}
-            >
-              <InputField
-                label="Address"
-                icon="home"
-                required
-                value={customerInfo.address}
-                onChangeText={(v) => handleInputChange("address", v)}
-                focused={focusedInput === "address"}
-                onFocus={() => setFocusedInput("address")}
-                onBlur={() => setFocusedInput(null)}
-              />
-              <InputField
-                label="Pincode"
-                icon="map-pin"
-                required
-                value={customerInfo.pincode}
-                keyboardType="number-pad"
-                onChangeText={(v) => handleInputChange("pincode", v)}
-                focused={focusedInput === "pincode"}
-                onFocus={() => setFocusedInput("pincode")}
-                onBlur={() => setFocusedInput(null)}
-              />
-            </AccordionSection>
+            {/* ✅ Contact Button
+            <TouchableOpacity style={styles.contactButton} onPress={handlePickContact}>
+              <Feather name="book" size={16} color="#fff" style={{ marginRight: 8 }} />
+              <Text style={styles.contactButtonText}>Select From Contact</Text>
+            </TouchableOpacity> */}
 
-            {/* IDs Section */}
-            <AccordionSection
-              title="ID Details"
-              expanded={expandedSections.ids}
-              onToggle={() => toggleSection("ids")}
-            >
-              <InputField
-                label="Aadhaar Number"
-                icon="credit-card"
-                required
-                value={customerInfo.adhaar_no}
-                keyboardType="number-pad"
-                onChangeText={(v) => handleInputChange("adhaar_no", v)}
-                focused={focusedInput === "adhaar_no"}
-                onFocus={() => setFocusedInput("adhaar_no")}
-                onBlur={() => setFocusedInput(null)}
-              />
-              <InputField
-                label="PAN Number"
-                icon="file-text"
-                value={customerInfo.pan_no}
-                onChangeText={(v) => handleInputChange("pan_no", v)}
-                focused={focusedInput === "pan_no"}
-                onFocus={() => setFocusedInput("pan_no")}
-                onBlur={() => setFocusedInput(null)}
-              />
-            </AccordionSection>
+            {/* Password */}
+            <InputField
+              label="Password"
+              icon="lock"
+              required
+              secureTextEntry
+              value={customerInfo.password}
+              onChangeText={(v) => handleInputChange("password", v)}
+              focused={focusedInput === "password"}
+              onFocus={() => setFocusedInput("password")}
+              onBlur={() => setFocusedInput(null)}
+            />
 
             {/* Customer Type */}
             <Text style={styles.label}>Customer Type *</Text>
@@ -288,15 +257,62 @@ const AddCustomer = ({ route, navigation }) => {
               </Picker>
             </View>
 
+            {/* Detailed Fields */}
+            {!isQuickAdd && (
+              <>
+                <InputField
+                  label="Email"
+                  icon="mail"
+                  required
+                  keyboardType="email-address"
+                  value={customerInfo.email}
+                  onChangeText={(v) => handleInputChange("email", v)}
+                />
+                <InputField
+                  label="Address"
+                  icon="home"
+                  required
+                  value={customerInfo.address}
+                  onChangeText={(v) => handleInputChange("address", v)}
+                />
+                <InputField
+                  label="Pincode"
+                  icon="map-pin"
+                  required
+                  keyboardType="number-pad"
+                  value={customerInfo.pincode}
+                  onChangeText={(v) => handleInputChange("pincode", v)}
+                />
+                <InputField
+                  label="Aadhaar Number"
+                  icon="credit-card"
+                  required
+                  keyboardType="number-pad"
+                  value={customerInfo.adhaar_no}
+                  onChangeText={(v) => handleInputChange("adhaar_no", v)}
+                />
+                <InputField
+                  label="PAN Number"
+                  icon="file-text"
+                  value={customerInfo.pan_no}
+                  onChangeText={(v) => handleInputChange("pan_no", v)}
+                />
+              </>
+            )}
+
             {/* Add Button */}
             <TouchableOpacity
               style={[styles.addButton, isLoading && { opacity: 0.7 }]}
               onPress={handleAddCustomer}
               disabled={isLoading}
             >
-              <Text style={styles.addButtonText}>
-                {isLoading ? "Please wait..." : "Add Customer"}
-              </Text>
+              {isLoading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.addButtonText}>
+                  {isQuickAdd ? "Quick Add" : "Add Customer"}
+                </Text>
+              )}
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
@@ -305,31 +321,13 @@ const AddCustomer = ({ route, navigation }) => {
   );
 };
 
-// Accordion Section Component
-const AccordionSection = ({ title, expanded, onToggle, children }) => (
-  <View style={styles.accordionSection}>
-    <TouchableOpacity style={styles.accordionHeader} onPress={onToggle}>
-      <Text style={styles.accordionTitle}>{title}</Text>
-      <Feather
-        name={expanded ? "minus" : "plus"}
-        size={20}
-        color="#6C4AB6"
-      />
-    </TouchableOpacity>
-    {expanded && <View style={styles.accordionContent}>{children}</View>}
-  </View>
-);
-
-// Reusable Input Field Component
+// Reusable input component
 const InputField = ({
   label,
   icon,
   required,
   value,
   onChangeText,
-  focused,
-  onFocus,
-  onBlur,
   keyboardType,
   secureTextEntry,
 }) => (
@@ -337,7 +335,7 @@ const InputField = ({
     <Text style={styles.label}>
       {label} {required && <Text style={{ color: "red" }}>*</Text>}
     </Text>
-    <View style={[styles.inputGroup, focused && styles.inputGroupFocused]}>
+    <View style={styles.inputGroup}>
       <Feather name={icon} size={18} color="#888" style={styles.icon} />
       <TextInput
         style={styles.textInput}
@@ -345,133 +343,102 @@ const InputField = ({
         value={value}
         onChangeText={onChangeText}
         keyboardType={keyboardType}
-        onFocus={onFocus}
-        onBlur={onBlur}
         secureTextEntry={secureTextEntry}
+        placeholderTextColor="#999"
       />
     </View>
   </View>
 );
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#f9f9f9",
-  },
+  safeArea: { flex: 1, backgroundColor: "#f3f2f8" },
   headerContainer: {
-    backgroundColor: "#6C4AB6",
-    borderBottomLeftRadius: 50,
-    borderBottomRightRadius: 50,
-    paddingVertical: 30,
+    borderBottomLeftRadius: 40,
+    borderBottomRightRadius: 40,
+    paddingVertical: 35,
     paddingHorizontal: 20,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    elevation: 5,
+    elevation: 6,
   },
   backButton: {
     backgroundColor: "rgba(255,255,255,0.2)",
     padding: 10,
     borderRadius: 50,
   },
-  headerTitle: {
-    color: "#fff",
-    fontSize: 22,
-    fontWeight: "bold",
-  },
+  headerTitle: { color: "#fff", fontSize: 20, fontWeight: "bold" },
   myCustomersButton: {
     backgroundColor: "#fff",
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 25,
   },
-  myCustomersButtonText: {
-    color: "#6C4AB6",
-    fontSize: 12,
-    fontWeight: "bold",
-  },
+  myCustomersButtonText: { color: "#6C4AB6", fontSize: 12, fontWeight: "bold" },
   formCard: {
     backgroundColor: "#fff",
-    borderRadius: 20,
+    borderRadius: 25,
     marginHorizontal: 20,
     marginTop: 25,
     padding: 20,
-    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
   },
-  label: {
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 5,
+  toggleButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#EFE9FB",
+    borderRadius: 25,
+    paddingVertical: 10,
+    marginBottom: 20,
   },
+  toggleButtonText: { color: "#6C4AB6", fontWeight: "bold", fontSize: 14 },
+  label: { fontWeight: "bold", color: "#333", marginBottom: 5 },
   inputGroup: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f2f2f2",
+    backgroundColor: "#f7f7f7",
     borderRadius: 20,
     paddingHorizontal: 15,
     height: 50,
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
   },
-  inputGroupFocused: {
-    borderWidth: 2,
-    borderColor: "#6C4AB6",
-  },
-  icon: {
-    marginRight: 8,
-  },
-  textInput: {
-    flex: 1,
-    color: "#000",
-    fontSize: 14,
-  },
-  row: {
+  icon: { marginRight: 8 },
+  textInput: { flex: 1, color: "#000", fontSize: 14 },
+  contactButton: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#f8c009ff",
+    borderRadius: 25,
+    paddingVertical: 10,
+    marginBottom: 15,
+    elevation: 3,
   },
-  column: {
-    flex: 1,
-    marginHorizontal: 4,
-  },
+  contactButtonText: { color: "#fff", fontWeight: "bold", fontSize: 14 },
   pickerContainer: {
     borderWidth: 1,
     borderColor: "#ccc",
     borderRadius: 20,
     overflow: "hidden",
     marginTop: 5,
+    marginBottom: 15,
   },
-  picker: {
-    height: 50,
-    color: "#333",
-  },
+  picker: { height: 50, color: "#333" },
   addButton: {
     backgroundColor: "#6C4AB6",
     paddingVertical: 14,
-    borderRadius: 25,
-    marginTop: 20,
+    borderRadius: 30,
+    marginTop: 25,
     alignItems: "center",
-    elevation: 4,
+    elevation: 5,
   },
-  addButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 16,
-  },
-  accordionSection: {
-    marginBottom: 15,
-  },
-  accordionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 10,
-  },
-  accordionTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#6C4AB6",
-  },
-  accordionContent: {
-    paddingTop: 10,
-  },
+  addButtonText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
 });
 
 export default AddCustomer;

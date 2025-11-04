@@ -7,38 +7,33 @@ import {
   TouchableOpacity,
   Dimensions,
   Image,
-  Modal,
-  // 💡 IMPORTS FOR ANIMATION
   Animated,
   Easing,
-  ToastAndroid,
-  ActivityIndicator,
-  // 💡 REQUIRED IMPORT
-  TextInput, 
+  TextInput,
+  Platform,
 } from "react-native";
-// import { SafeAreaView } from "react-native-safe-area-context"; // ❌ REMOVED
-import COLORS from "../constants/color";
-import Header from "../components/Header";
-import baseUrl from "../constants/baseUrl";
-import axios from "axios";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
+import Icon from "react-native-vector-icons/MaterialIcons";
+import axios from "axios";
+import baseUrl from "../constants/baseUrl";
+import Header from "../components/Header";
 import { AgentContext } from "../context/AgentContextProvider";
 import { useNetInfo } from "@react-native-community/netinfo";
 
 const { width } = Dimensions.get("window");
 
-// Primary color for this stylish version (Deep Teal/Cyan)
-const PRIMARY_COLOR = "#00BCD4";
-const PRIMARY_GRADIENT_START = "#00E5FF";
-const PRIMARY_GRADIENT_END = "#0097A7";
-const SUCCESS_COLOR = "#4CAF50";
-const ATTENDANCE_SUBMIT_URL = `${baseUrl}/employee-attendance/mark-attendance`;
+// 💜 Violet Theme
+const DARK_VIOLET = "#3C1E70";
+const LIGHT_VIOLET = "#5B2E9B";
+const ACCENT_VIOLET = "#8A56D3";
+const TEXT_LIGHT = "#F5F1FF";
+const CARD_BG = "#4E2A86";
 
+// 🖼️ Card Images
 const cardImagePaths = {
   attendence: require("../assets/ab.png"),
   collections: require("../assets/Collection2.png"),
-  qrCode: require("../assets/qrcode.png"),
+  qrCode: require("../assets/qr-code.png"),
   daybook: require("../assets/Daybook2.png"),
   targets: require("../assets/Target2.png"),
   myLeads: require("../assets/Lead1.png"),
@@ -48,759 +43,525 @@ const cardImagePaths = {
   reports: require("../assets/Reports2.png"),
   commission: require("../assets/commissions1.png"),
   groups: require("../assets/groups1.png"),
-  customerOnHold: require("../assets/Holdon2.png"), 
-  monthlyTurnover: require("../assets/MITB.png"), // Monthly Turnover image path
+  customerOnHold: require("../assets/Holdon2.png"),
+  monthlyTurnover: require("../assets/MITB.png"),
   DueReportImage: require("../assets/dues.png"),
+  refer: require("../assets/refer.png"), // 🔹 Add your icon image here 
+  rewards: require("../assets/rewards.png"), // 🔹 Add your icon image here
+  subscriptions: require("../assets/subscribe.png"),
+   mychit: require("../assets/chit.png"), // you can replace with your own
+  gold: require("../assets/gold.png"),
+  loan: require("../assets/loan.png"),
+  pigmy: require("../assets/pigme.png"),
 };
 
-const AttendanceModal = ({
-  attendanceLoading,
-  selectedStatus, 
-  visible,
-  message,
-  onClose,
-  handleSubmitAttendance,
-  note,
-  setNote,
-}) => {
-  // NEW STATE FOR ACCORDION
-  const [isNoteOpen, setIsNoteOpen] = useState(false);
+// 🔍 Search Bar Component
+const SearchBar = ({ searchQuery, setSearchQuery }) => (
+  <View style={searchStyles.container}>
+    <Icon name="search" size={22} color="#fff" style={searchStyles.icon} />
+    <TextInput
+      style={searchStyles.input}
+      placeholder="Search modules or customers..."
+      placeholderTextColor="#DDD"
+      value={searchQuery}
+      onChangeText={(text) => setSearchQuery(text)}
+    />
+    {searchQuery.length > 0 && (
+      <TouchableOpacity
+        onPress={() => setSearchQuery("")}
+        style={searchStyles.clearButton}
+      >
+        <Icon name="clear" size={20} color="#fff" />
+      </TouchableOpacity>
+    )}
+  </View>
+);
 
-  const scaleAnim = useState(new Animated.Value(0.5))[0];
+// 🖼️ Banner Carousel Component
+const BannerCarousel = () => {
+  const scrollX = useRef(new Animated.Value(0)).current;
+  const scrollRef = useRef(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  const banners = [
+    "https://media.istockphoto.com/id/1374485787/vector/3d-credit-card-money-financial-security-for-online-shopping-online-payment-credit-card-with.jpg?s=612x612&w=0&k=20&c=fQ_0faElpY4hqtpWWe1PuiHgpJvhy9_bVFeMZlQntvw=",
+    "https://media.istockphoto.com/id/1318983438/vector/cartoon-men-and-women-using-mobile-applications.jpg?s=612x612&w=0&k=20&c=QO7dfYSiitUrUSgLYgVvW-DNxmkkHNbUUAOSSW3IqXw=",
+    "https://media.istockphoto.com/id/2150836874/vector/flat-vector-mobile-application-developer-and-designer-team-planning-process-working-concept.jpg?s=612x612&w=0&k=20&c=CK48Ui8oDUiD3qA8vVRd_E7o_QeU2v00ZqIeaIX2ooo=",
+    "https://media.istockphoto.com/id/1149446411/vector/refer-a-friend-concept-vector.jpg?s=612x612&w=0&k=20&c=4fUgEfN-JP15Kfl4GHqU5D8CAqr4qmR55Ls4hfrG5bY=",
+    "https://media.istockphoto.com/id/532580000/photo/woman-pressing-multimedia-and-entertainment-icons-on-a-virtual-background.jpg?s=612x612&w=0&k=20&c=ww9WN0FSWx0bOeKq0Kp2cBU7MWoGxEivWSlNhDSryiQ=",
+  ];
 
   useEffect(() => {
-    if (visible) {
-      scaleAnim.setValue(0.5);
-      Animated.timing(scaleAnim, {
-        toValue: 1,
-        duration: 300,
-        easing: Easing.out(Easing.back(1.7)),
-        useNativeDriver: true,
-      }).start();
-      // Ensure note accordion is closed and note cleared when modal opens
-      setIsNoteOpen(false); 
-      setNote(""); 
-    }
-  }, [visible]);
-
-  const animatedImageStyle = {
-    transform: [{ scale: scaleAnim }],
-  };
+    const interval = setInterval(() => {
+      const nextIndex = (currentIndex + 1) % banners.length;
+      setCurrentIndex(nextIndex);
+      scrollRef.current?.scrollTo({ x: nextIndex * width, animated: true });
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [currentIndex]);
 
   return (
-    <Modal
-      animationType="fade"
-      transparent={true}
-      visible={visible}
-      onRequestClose={onClose}
-    >
-      <View style={modalStyles.centeredView}>
-        <View style={modalStyles.modalView}>
-          <TouchableOpacity style={modalStyles.closeButton} onPress={onClose}>
-            <Text style={modalStyles.closeButtonText}>✕</Text>
-          </TouchableOpacity>
-
-          <LinearGradient
-            colors={[PRIMARY_GRADIENT_START, PRIMARY_GRADIENT_END]}
-            style={modalStyles.iconHeader}
-          >
-            <Animated.Image
-              source={cardImagePaths.attendence}
-              style={[modalStyles.modalImage, animatedImageStyle]}
-              resizeMode="contain"
-            />
-          </LinearGradient>
-
-          <Text style={modalStyles.modalHeading}>Daily Status Check</Text>
-          <Text style={modalStyles.modalText}>{message}</Text>
-
-          {/* 💡 STYLISH ACCORDION HEADER (NOTE - OPTIONAL) */}
-          <TouchableOpacity
-              style={modalStyles.accordionHeader}
-              onPress={() => setIsNoteOpen(!isNoteOpen)}
-              activeOpacity={0.8}
-          >
-              <Text style={modalStyles.noteLabel}>
-                  {isNoteOpen ? 'Hide Note' : 'Add a Note (Optional)'} 
-              </Text>
-              <Text style={modalStyles.arrowIcon}>
-                  {isNoteOpen ? '▲' : '▼'}
-              </Text>
-          </TouchableOpacity>
-
-          {/* 💡 ACCORDION CONTENT (TEXT INPUT) */}
-          {isNoteOpen && (
-              <View style={modalStyles.accordionContent}>
-                  <TextInput
-                      style={modalStyles.inputField}
-                      // 💡 UPDATED SMALLER PLACEHOLDER
-                      placeholder="e.g., Working remotely today..."
-                      placeholderTextColor="#a0a0a0"
-                      value={note}
-                      onChangeText={setNote}
-                      multiline
-                  />
-              </View>
-          )}
-          {/* END ACCORDION */}
-
-          <TouchableOpacity
-            disabled={!selectedStatus || attendanceLoading}
-            onPress={handleSubmitAttendance}
-            style={modalStyles.markAttendanceButtonWrapper}
-          >
-            <LinearGradient
-              colors={
-                !selectedStatus
-                  ? ["#B0B0B0", "#909090"]
-                  : [PRIMARY_GRADIENT_START, PRIMARY_GRADIENT_END]
-              }
-              start={{ x: 0, y: 0.5 }}
-              end={{ x: 1, y: 0.5 }}
-              style={modalStyles.markAttendanceButton}
-            >
-              {attendanceLoading ? (
-                <ActivityIndicator size={"small"} color={"#fff"} />
-              ) : (
-                <Text style={modalStyles.markAttendanceButtonText}>
-                  PRESENT
-                </Text> 
-              )}
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
+    <View style={carouselStyles.container}>
+      <ScrollView
+        ref={scrollRef}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        scrollEventThrottle={16}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+          { useNativeDriver: false }
+        )}
+      >
+        {banners.map((image, index) => (
+          <Image
+            key={index}
+            source={{ uri: image }}
+            style={carouselStyles.image}
+            resizeMode="cover"
+          />
+        ))}
+      </ScrollView>
+      <View style={carouselStyles.indicatorContainer}>
+        {banners.map((_, index) => {
+          const opacity = scrollX.interpolate({
+            inputRange: [
+              (index - 1) * width,
+              index * width,
+              (index + 1) * width,
+            ],
+            outputRange: [0.3, 1, 0.3],
+            extrapolate: "clamp",
+          });
+          return <Animated.View key={index} style={[carouselStyles.dot, { opacity }]} />;
+        })}
       </View>
-    </Modal>
+    </View>
   );
 };
 
 const Home = ({ route, navigation }) => {
-  const { user = {}, agentInfo = {} } = route.params || {};
+  const { user = {} } = route.params || {};
+  const { setModifyPayment } = useContext(AgentContext);
   const [agent, setAgent] = useState({});
-  const [selectedStatus, setSelectedStatus] = useState("Present"); 
-  const { modifyPayment, setModifyPayment } = useContext(AgentContext);
-  const [showAttendanceModal, setShowAttendanceModal] = useState(false);
-  const [attendanceMessage, setAttendanceMessage] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const netInfo = useNetInfo();
-  const [attendanceLoading, setAttendanceLoading] = useState(false);
-  const [note, setNote] = useState("");
-
-  // 💡 ANIMATION: Create Animated.Values for each card
   const cardAnimations = useRef([]);
-  const hasAnimated = useRef(false);
+  const revealAnim = useRef(new Animated.Value(0)).current;
+  const scanLineAnim = useRef(new Animated.Value(0)).current;
+  const qrCodeImage = require("../assets/kotak_bank_qr.jpeg");
 
-  // Define cardsData early to use its length for animation array initialization
-  const cardsData = [
-    // {
-    //   id: "attendence",
-    //   name: "Attendance",
-    //   imagePath: cardImagePaths.attendence,
-    //   onPress: () => navigation.navigate("Attendance", { user }),
-    //   backgroundColor: "#D9D7F1",
-    // },
+  // All Cards
+  const rawCardsData = [
+    { id: "monthlyTurnover", name: "Monthly Turnover", imagePath: cardImagePaths.monthlyTurnover, onPress: () => navigation.navigate("MonthlyTurnover") },
+    { id: "collections", name: "Collections", imagePath: cardImagePaths.collections, onPress: () => navigation.navigate("PaymentNavigator") },
+    { id: "qrCode", name: "QR Code", imagePath: cardImagePaths.qrCode, onPress: () => navigation.navigate("qrCode") },
+    { id: "daybook", name: "Daybook", imagePath: cardImagePaths.daybook, onPress: () => navigation.navigate("PayNavigation", { user }) },
+    { id: "commission", name: "Commissions", imagePath: cardImagePaths.commission, onPress: () => navigation.navigate("Commissions", { user }) },
+    { id: "targets", name: "Targets", imagePath: cardImagePaths.targets, onPress: () => navigation.navigate("Target") },
+    { id: "myLeads", name: "My Leads", imagePath: cardImagePaths.myLeads, onPress: () => navigation.navigate("PayNavigation", { screen: "ViewLeads", params: { user } }) },
+    { id: "addCustomers", name: "Add Customers", imagePath: cardImagePaths.addCustomers, onPress: () => navigation.navigate("CustomerNavigation", { screen: "Customer", params: { user } }) },
+    { id: "myCustomers", name: "My Customers", imagePath: cardImagePaths.myCustomers, onPress: () => navigation.navigate("CustomerNavigation", { screen: "ViewEnrollments", params: { user } }) },
+    { id: "customerOnHold", name: "Customer On Hold", imagePath: cardImagePaths.customerOnHold, onPress: () => navigation.navigate("CustomerOnHold") },
+    { id: "myTasks", name: "My Tasks", imagePath: cardImagePaths.myTasks, onPress: () => navigation.navigate("MyTasks", { employeeId: user.userId, agentName: agent.name }) },
+    { id: "reports", name: "Reports", imagePath: cardImagePaths.reports, onPress: () => navigation.navigate("PayNavigation", { screen: "Reports", params: { user } }) },
+    { id: "groups", name: "Groups", imagePath: cardImagePaths.groups, onPress: () => navigation.navigate("Enrollment", { screen: "Enrollment", params: { user } }) },
+    { id: "DueReport", name: "Due Report", imagePath: cardImagePaths.DueReportImage, onPress: () => navigation.navigate("PayNavigation", { screen: "Due", params: { user } }) },
+  ];
 
-    {
-        id: "monthlyTurnover", 
-        name: "Monthly Turnover",
-        imagePath: cardImagePaths.monthlyTurnover,
-        onPress: () => navigation.navigate("MonthlyTurnover"),
-        backgroundColor: "#FFECB3", 
-    },
-    agentInfo?.designation_id?.permission?.collection === "true" && {
-      id: "collections",
-      name: "Collections",
-      imagePath: cardImagePaths.collections,
-      onPress: () => navigation.navigate("PaymentNavigator"),
-      backgroundColor: "#FFEBEE",
-    },
-    agentInfo?.designation_id?.permission?.collection === "true" && {
-      id: "qrCode",
-      name: "QR Code",
-      imagePath: cardImagePaths.qrCode,
-      onPress: () => navigation.navigate("qrCode"),
-      backgroundColor: "#FFEBEE",
-    },
-    agentInfo?.designation_id?.permission?.daybook === "true" && {
-      id: "daybook",
-      name: "Daybook",
-      imagePath: cardImagePaths.daybook,
-      onPress: () => navigation.navigate("PayNavigation", { user }),
-      backgroundColor: "#E8F5E9",
-    },
-        {
-        id: "commission",
-        name: "Commissions",
-        imagePath: cardImagePaths.commission,
-        onPress: () => navigation.navigate("Commissions",{ user }),
-      backgroundColor: "#E8F5E9",
-    }, 
-    
+  const cardsData = rawCardsData.filter((card) =>
+    card.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
-
-    agentInfo?.designation_id?.permission?.targets === "true" && {
-      id: "targets",
-      name: "Targets",
-      imagePath: cardImagePaths.targets,
-      onPress: () => navigation.navigate("Target"),
-      backgroundColor: "#FFFDE7",
-    },
-    agentInfo?.designation_id?.permission?.leads === "true" && {
-      id: "myLeads",
-      name: "My Leads",
-      imagePath: cardImagePaths.myLeads,
-      onPress: () =>
-        navigation.navigate("PayNavigation", {
-          screen: "ViewLeads",
-          params: { user },
-        }),
-      backgroundColor: "#E3F2FD",
-    },
-    {
-      id: "addCustomers",
-      name: "Add Customers",
-      imagePath: cardImagePaths.addCustomers,
-      onPress: () =>
-        navigation.navigate("CustomerNavigation", {
-          screen: "Customer",
-          params: { user },
-        }),
-      backgroundColor: "#F3E5F5",
-    },
-    {
-      id: "myCustomers",
-      name: "My Customers",
-      imagePath: cardImagePaths.myCustomers,
-      onPress: () =>
-        navigation.navigate("CustomerNavigation", {
-          screen: "ViewEnrollments",
-          params: { user },
-        }),
-      backgroundColor: "#FFECB3",
-    },
-    {
-      id: "customerOnHold",
-      name: "Customer On Hold",
-      imagePath: cardImagePaths.customerOnHold,
-      onPress: () => navigation.navigate("CustomerOnHold"),
-      backgroundColor: "#FFCDD2",
-    },
-    {
-      id: "myTasks",
-      name: "My Tasks",
-      imagePath: cardImagePaths.myTasks,
-      onPress: () =>
-        navigation.navigate("MyTasks", {
-          employeeId: user.userId,
-          agentName: agent.name,
-        }),
-      backgroundColor: "#E0F7FA",
-    },
-    agentInfo?.designation_id?.permission?.reports === "true" && {
-      id: "reports",
-      name: "Reports",
-      imagePath: cardImagePaths.reports,
-      onPress: () =>
-        navigation.navigate("PayNavigation", {
-          screen: "Reports",
-          params: { user },
-        }),
-      backgroundColor: "#FCE4EC",
-    },
-    {
-      id: "groups",
-      name: "Groups",
-      imagePath: cardImagePaths.groups,
-      onPress: () =>
-        navigation.navigate("Enrollment", {
-          screen: "Enrollment",
-          params: { user },
-        }),
-      backgroundColor: "#D1C4E9",
-    },
-    
-    {
-      id: "DueReport",
-      name: "DueReport",
-      imagePath: cardImagePaths.DueReportImage,
-      onPress: () =>
-        navigation.navigate("PayNavigation", {
-          screen: "Due",
-          params: { user },
-        }),
-      backgroundColor: "#e9d0e3ff",
-    },
-  ].filter(Boolean);
-
-  // Initialize Animated.Value for each card
+  // Animate Cards
   if (cardAnimations.current.length !== cardsData.length) {
     cardAnimations.current = cardsData.map(
       (_, i) => cardAnimations.current[i] || new Animated.Value(0)
     );
   }
-  
-  // 💡 ANIMATION: Staggered animation effect
+
   useEffect(() => {
-    // Only run the animation once, when data is ready and net is connected
-    if (cardsData.length > 0 && netInfo.isConnected && !hasAnimated.current) {
-      const animations = cardAnimations.current.map((anim, index) => {
-        return Animated.timing(anim, {
+    if (cardsData.length > 0 && netInfo.isConnected) {
+      const animations = cardsData.map((_, index) =>
+        Animated.timing(cardAnimations.current[index], {
           toValue: 1,
-          duration: 400, // Speed of each card's animation
-          delay: index * 50, // Staggered delay for each card
+          duration: 400,
+          delay: index * 80,
           easing: Easing.out(Easing.ease),
           useNativeDriver: true,
-        });
-      });
-
-      Animated.stagger(10, animations).start(() => {
-        hasAnimated.current = true; // Mark as animated
-      });
-    }
-  }, [cardsData.length, netInfo.isConnected]);
-
-
-  const handleSubmitAttendance = async () => {
-    const ATTENDANCE_SUBMIT_URL = `${baseUrl}/employee-attendance/punch`;
-    try {
-      setAttendanceLoading(true);
-      
-      const response = await axios.post(ATTENDANCE_SUBMIT_URL, {
-        employee_id: user?.userId,
-        status: selectedStatus, // "Present"
-        method: "No Auth",
-        type: "in",
-        note: note,
-      });
-      const responseMessage = response?.data?.message;
-      ToastAndroid.show(
-        responseMessage ? responseMessage : "Attendance Marked Successfully",
-        ToastAndroid.SHORT
+        })
       );
-    } catch (error) {
-      console.log(error, "error");
-      ToastAndroid.show("Failed to Mark Attendance", ToastAndroid.SHORT);
-    } finally {
-      setAttendanceLoading(false);
-      setShowAttendanceModal(false)
-      setNote("");
+      Animated.stagger(50, animations).start();
     }
-  };
-  useEffect(() => {
-    if (agentInfo?.designation_id?.permission) {
-      setModifyPayment(
-        agentInfo.designation_id.permission.modify_payments === "true"
-      );
-    }
-  }, [agentInfo, setModifyPayment]);
+  }, [cardsData, netInfo.isConnected]);
 
+  // Fetch Agent
   useEffect(() => {
     const fetchAgent = async () => {
-      if (user && user.userId) {
+      if (user.userId) {
         try {
-          const response = await axios.get(
-            `${baseUrl}/agent/get-agent-by-id/${user.userId}`
-          );
+          const response = await axios.get(`${baseUrl}/agent/get-agent-by-id/${user.userId}`);
           if (response.data) setAgent(response.data);
         } catch (error) {
-          console.error("Error fetching agent data:", error.message);
+          console.error("Error fetching agent:", error);
         }
       }
     };
     if (netInfo.isConnected) fetchAgent();
   }, [user.userId, netInfo.isConnected]);
 
+  // QR Animation
   useEffect(() => {
-    const checkAttendance = async () => {
-      const ATTENDANCE_MODAL_URL = `${baseUrl}/employee-attendance/modal`;
-      
-      const body = { employee_id: user.userId,};
-
-      try {
-        const response = await axios.post(ATTENDANCE_MODAL_URL, { ...body });
-        const data = response.data;
-        console.log(" Attendance API Response:", data);
-
-        if (data?.showModal === true) {
-          setAttendanceMessage(data.message || "Eligible to mark attendance");
-          setShowAttendanceModal(true);
-        } else if (data?.message) {
-          // If showModal is false but there's a message (like "Attendance Already Marked"),
-          // we treat it as a successful check and suppress the warning/error logging.
-          // console.warn("Attendance API message:", data.message); // Commented out to reduce console noise
-          setShowAttendanceModal(false);
-        } else {
-          setShowAttendanceModal(false);
-        }
-      } catch (error) {
-        const errorMessage =
-          error.response?.data?.message || error.message;
-
-        // 💡 MODIFICATION HERE: Check if the "error" is actually the expected "Attendance Already Marked" status.
-        // The API might be using a non-200 status code to return this state.
-        if (errorMessage !== "Attendance Already Marked") {
-          console.error(
-            "❌ Error checking attendance status:",
-            errorMessage
-          );
-        } else {
-            // Success case, but returned as an HTTP error code (e.g., 400).
-            // We log it as an info message instead of an error.
-            console.info("✅ Attendance check complete:", errorMessage);
-        }
-        setShowAttendanceModal(false);
-      }
-    };
-
-    if (user.userId && netInfo.isConnected) checkAttendance();
-  }, [user.userId, netInfo.isConnected]);
-
-  const handleMarkAttendance = async (selectedStatus) => {
-    setShowAttendanceModal(false);
-
-    const submissionBody = {
-      employee_id: user.userId,
-      status: selectedStatus,
-      
-    };
-
-    try {
-      const response = await axios.post(ATTENDANCE_SUBMIT_URL, submissionBody);
-
-      if (response.status === 200 || response.status === 201) {
-        console.log("Attendance marked successfully:", response.data.message);
-
-        navigation.navigate("Attendance", {
-          status: selectedStatus,
-          message: response.data.message || "Attendance marked successfully!",
-        });
-      }
-    } catch (error) {
-      const errorMessage =
-        error.response?.data?.message ||
-        "Failed to mark attendance. Please try again.";
-      console.error("❌ Error marking attendance:", errorMessage);
-
-      navigation.navigate("Attendance", {
-        status: selectedStatus,
-        message: errorMessage,
-        error: true,
-      });
+    const STEPS = 8;
+    const STEP_DURATION = 140;
+    const seq = [];
+    for (let i = 1; i <= STEPS; i++) {
+      seq.push(
+        Animated.timing(revealAnim, {
+          toValue: i / STEPS,
+          duration: STEP_DURATION,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: false,
+        })
+      );
+      seq.push(Animated.timing(new Animated.Value(0), { toValue: 0, duration: 40, useNativeDriver: false }));
     }
-  };
+    Animated.sequence(seq).start();
 
+    const loopScanner = Animated.loop(
+      Animated.sequence([
+        Animated.timing(scanLineAnim, { toValue: 1, duration: 900, easing: Easing.linear, useNativeDriver: true }),
+        Animated.timing(scanLineAnim, { toValue: 0, duration: 100, easing: Easing.linear, useNativeDriver: true }),
+      ])
+    );
+    loopScanner.start();
+    return () => loopScanner.stop();
+  }, []);
 
-  const renderNoInternet = () => (
-    <View style={styles.noInternetContainer}>
-      <Image
-        source={require("../assets/Nointernetp.png")}
-        style={styles.noInternetImage}
-        resizeMode="contain"
-      />
-      <Text style={styles.noInternetText}>Oops! No internet connection.</Text>
-      <Text style={styles.noInternetSubText}>
-        Please check your network and try again.
-      </Text>
-    </View>
-  );
+  const containerHeight = 280;
+  const revealHeight = revealAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, containerHeight],
+  });
+  const scanTranslateY = scanLineAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-20, containerHeight + 20],
+  });
 
   return (
-    // 💡 FIX APPLIED: LinearGradient now wraps the entire screen for full coverage.
-    <LinearGradient
-      colors={["#dbf6faff", "#90dafcff"]}
-      style={{ flex: 1 }} // Apply flex: 1 to the gradient for full viewport height
-    >
-      {/* ❌ REMOVED SafeAreaView - now the content will start from the top edge */}
-      {/* <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }}> */}
-        <View style={styles.mainContentArea_noSafeArea}> 
-        {/* 💡 MODIFIED STYLE NAME to account for no SafeAreaView */}
-          <Header />
-          <View style={styles.introSection}>
-            <Text style={styles.welcomeText}>
-              Hello {agent.name || "Agent"},
-            </Text>
-            <Text style={styles.questionText}>
-              Welcome to MyChits Agent App
-            </Text>
-          </View>
+    <LinearGradient colors={[DARK_VIOLET, LIGHT_VIOLET]} style={styles.container}>
+      <View style={styles.contentWrapper}>
+        <Header />
+        <Text style={styles.welcomeText}>Hello {agent.name || "Agent"},</Text>
+        <Text style={styles.subText}>Welcome to MyChits Agent App</Text>
 
-          {/* FIX: Only render the main content if user.userId is available */}
-          {!user.userId ? (
-             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                <ActivityIndicator size="large" color={PRIMARY_COLOR} />
-                <Text style={{ marginTop: 10, color: '#666' }}>Loading Agent Data...</Text>
-            </View>
-          ) : netInfo.isConnected === false ? (
-            renderNoInternet()
-          ) : (
-            <ScrollView
-              contentContainerStyle={styles.cardsScrollViewContent}
-              showsVerticalScrollIndicator={false}
-            >
-              <View style={styles.cardsGridContainer}>
-                {cardsData.map((card, index) => {
-                  
-                  // 💡 ANIMATION: Interpolate the scale and translateY
+        {netInfo.isConnected && <SearchBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />}
+
+        {/* 🖼️ Banner Carousel Section */}
+        {netInfo.isConnected && <BannerCarousel />}
+
+        {!netInfo.isConnected ? (
+          <View style={styles.noInternetContainer}>
+            <Text style={styles.noInternetText}>No internet connection.</Text>
+            <Text style={styles.noInternetSubText}>Please check your network.</Text>
+          </View>
+        ) : (
+          <ScrollView contentContainerStyle={styles.scrollView}>
+            {/* Cards */}
+            <View style={styles.cardsGrid}>
+              {cardsData.length > 0 ? (
+                cardsData.map((card, index) => {
                   const scale = cardAnimations.current[index].interpolate({
                     inputRange: [0, 1],
-                    outputRange: [0.7, 1], // Start smaller, end at normal size
+                    outputRange: [0.8, 1],
                   });
-
-                  const translateY = cardAnimations.current[index].interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [50, 0], // Start 50 points lower, slide up
-                  });
-                  
-                  const animatedStyle = {
-                    opacity: cardAnimations.current[index], // Fade in
-                    transform: [{ scale }, { translateY }],
-                  };
-
+                  const opacity = cardAnimations.current[index];
                   return (
-                    <Animated.View key={card.id} style={[styles.gridCardWrapper, animatedStyle]}>
-                      <TouchableOpacity
-                        style={[
-                          styles.gridCard,
-                          { backgroundColor: card.backgroundColor },
-                        ]}
-                        onPress={card.onPress}
-                      >
-                        <Image
-                          source={card.imagePath}
-                          style={styles.cardImage}
-                          resizeMode="contain"
-                        />
-                        <Text style={styles.gridCardText}>{card.name}</Text>
+                    <Animated.View
+                      key={card.id}
+                      style={[styles.cardWrapper, { opacity, transform: [{ scale }] }]}
+                    >
+                      <TouchableOpacity style={styles.card} onPress={card.onPress}>
+                        <Image source={card.imagePath} style={styles.cardImage} resizeMode="contain" />
+                        <Text style={styles.cardText}>{card.name}</Text>
                       </TouchableOpacity>
                     </Animated.View>
                   );
-                })}
-              </View>
-            </ScrollView>
-          )}
-        </View>
-      {/* </SafeAreaView> */}
+                })
+              ) : (
+                <View style={styles.noResults}>
+                  <Text style={styles.noResultsText}>No modules found for "{searchQuery}"</Text>
+                </View>
+              )}
+            </View>
 
-      <AttendanceModal
-        attendanceLoading={attendanceLoading}
-        selectedStatus={selectedStatus}
-        visible={showAttendanceModal}
-        message={attendanceMessage}
-        onClose={() => setShowAttendanceModal(false)}
-        onProceed={handleMarkAttendance}
-        handleSubmitAttendance={handleSubmitAttendance}
-        note={note}
-        setNote={setNote}
-      />
+            {/* 🌟 NEW SECTION: REFER & REWARDS */}
+            <View style={styles.specialCardContainer}>
+              <TouchableOpacity style={styles.specialCard} onPress={() => navigation.navigate("ReferAndEarn")}>
+                <Image source={cardImagePaths.refer} style={styles.specialIcon} resizeMode="contain" />
+                <View style={styles.specialTextContainer}>
+                  <Text style={styles.specialTitle}>Refer & Earn</Text>
+                  <Text style={styles.specialSubtitle}>Invite friends and earn rewards</Text>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.specialCard} onPress={() => navigation.navigate("Rewards")}>
+                <Image source={cardImagePaths.rewards} style={styles.specialIcon} resizeMode="contain" />
+                <View style={styles.specialTextContainer}>
+                  <Text style={styles.specialTitle}>Rewards</Text>
+                  <Text style={styles.specialSubtitle}>Check your earned points & perks</Text>
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.specialCard} onPress={() => navigation.navigate("RouteCustomerChit")}>
+                <Image source={cardImagePaths.subscriptions} style={styles.specialIcon} resizeMode="contain" />
+                <View style={styles.specialTextContainer}>
+                  <Text style={styles.specialTitle}>Subscriptions</Text>
+                  <Text style={styles.specialSubtitle}>Stay updated with your plans and earned perks</Text>
+                </View>
+              </TouchableOpacity>
+              
+
+            </View>
+            
+<View style={styles.mychitSection}>
+  <Text style={styles.mychitHeader}>Add Payments </Text>
+  <View style={styles.mychitGrid}>
+    {[
+      { id: "mychit", title: "MyChit", img: cardImagePaths.mychit, screen: "RouteCustomerChit" },
+      { id: "gold", title: "Gold", img: cardImagePaths.gold, screen: "RouteCustomerGold" },
+      { id: "loan", title: "Loan", img: cardImagePaths.loan, screen: "RouteCustomerLoan" },
+      { id: "pigmy", title: "Pigmy", img: cardImagePaths.pigmy, screen: "RouteCustomerPigme" },
+    ].map((item) => (
+      <TouchableOpacity
+        key={item.id}
+        style={styles.mychitCard}
+        activeOpacity={0.8}
+        onPress={() => navigation.navigate(item.screen)}
+      >
+        <Image source={item.img} style={styles.mychitIcon} />
+        <Text style={styles.mychitText}>{item.title}</Text>
+      </TouchableOpacity>
+    ))}
+  </View>
+</View>
+
+
+
+
+            {/* ✅ QR SCANNER SECTION BELOW */}
+            <View style={styles.qrSection}>
+              <Text style={styles.qrTitle}>MyChits Payment QR Code</Text>
+              <Text style={styles.qrSubTitle}>Scan and pay via Kotak UPI</Text>
+
+              <View style={styles.qrCard}>
+                <Text style={styles.qrUpiText}>UPI ID: mychits@kotak</Text>
+                <View style={styles.maskWrapper}>
+                  <Image source={qrCodeImage} style={[styles.qrImage, { height: containerHeight }]} />
+                  <Animated.View
+                    style={[styles.revealOverlay, { height: Animated.subtract(containerHeight, revealHeight) }]}
+                  />
+                  <Animated.View
+                    style={[styles.scanLine, { transform: [{ translateY: scanTranslateY }] }]}
+                  />
+                </View>
+                <Text style={styles.qrBottomText}>Powered by Kotak Mahindra Bank</Text>
+              </View>
+            </View>
+          </ScrollView>
+        )}
+      </View>
     </LinearGradient>
   );
 };
 
-
+// 💜 Styles
 const styles = StyleSheet.create({
-  // 💡 NEW STYLE TO REPLACE SafeAreaView wrapper behavior (padding from the top for header and content)
-  mainContentArea_noSafeArea: { flex: 1, marginHorizontal: 22, marginTop: 40 }, // Increased marginTop to avoid status bar overlap
-  
-  // mainContentArea: { flex: 1, marginHorizontal: 22, marginTop: 12 }, // ORIGINAL STYLE
-
-  introSection: { marginTop: 20, marginBottom: 20, paddingHorizontal: 5 },
-  welcomeText: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 5,
-  },
-  questionText: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: "#555",
-    marginBottom: 10,
-  },
-  cardsScrollViewContent: { paddingBottom: 50 },
-  cardsGridContainer: {
+  container: { flex: 1 },
+  contentWrapper: { flex: 1, marginHorizontal: 16, marginTop: 40 },
+  welcomeText: { fontSize: 26, fontWeight: "bold", color: TEXT_LIGHT },
+  subText: { fontSize: 18, color: "#D8CFFF", marginBottom: 15 },
+  scrollView: { paddingBottom: 80 },
+  cardsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
     marginTop: 10,
   },
-  // 💡 NEW WRAPPER STYLE for animation (handles spacing and size)
-  gridCardWrapper: {
-    width: (width - 22 * 2 - 20) / 2, // Matches the width of gridCard
-    height: (width - 22 * 2 - 20) / 2, // Matches the height of gridCard
+  cardWrapper: {
+    width: (width - 16 * 2 - 20) / 3,
+    height: (width - 16 * 2 - 20) / 3,
     marginBottom: 20,
   },
-  gridCard: {
-    // Note: Dimensions are removed from here and moved to gridCardWrapper
-    flex: 1, // Fill the wrapper
-    borderRadius: 15,
-    borderColor: "gold",
-    borderWidth: 1,
-    justifyContent: "center",
+  card: {
+    flex: 1,
+    backgroundColor: CARD_BG,
+    borderRadius: 12,
+    borderWidth: 1.2,
+    borderColor: "#fff",
     alignItems: "center",
-    // marginBottom: 20, // Removed from here, moved to gridCardWrapper
+    justifyContent: "center",
+    padding: 8,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 5,
-    padding: 5,
   },
-  cardImage: { width: 155, height: 90 },
-  gridCardText: {
-    fontSize: 17,
-    fontWeight: "900",
-    color: COLORS.black,
+  cardImage: { width: 80, height: 50 },
+  cardText: {
+    marginTop: 6,
+    fontSize: 14,
+    fontWeight: "600",
+    color: TEXT_LIGHT,
     textAlign: "center",
   },
-  noInternetContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
+  mychitSection: {
+   
+   
+    padding: 12,
+    marginBottom: 30,
   },
-  noInternetImage: { width: 200, height: 200 },
-  noInternetText: {
-    fontSize: 20,
+  mychitHeader: {
+    color: "#fff",
+    fontSize: 18,
     fontWeight: "bold",
-    color: "#333",
-    marginTop: 20,
+    marginBottom: 10,
+    textAlign: "center",
   },
-  noInternetSubText: { fontSize: 16, color: "#777", marginTop: 10 },
-  gradientOverlay: { flex: 1 }, // Retained this style definition although it's no longer used in the component body
+  mychitGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+  },
+  mychitCard: {
+    width: (width - 16 * 2 - 40) / 2,
+    backgroundColor: CARD_BG,
+    borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 15,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: "#fff",
+  },
+  mychitIcon: { width: 60, height: 60, marginBottom: 8 },
+  mychitText: { color: "#fff", fontSize: 15, fontWeight: "600" },
+  // 💎 Special Refer & Rewards Section
+  specialCardContainer: {
+    marginTop: 10,
+    marginBottom: 30,
+    borderWidth: 1.5,
+    borderColor: "#fff",
+    borderRadius: 14,
+    padding: 10,
+    backgroundColor: LIGHT_VIOLET,
+  },
+  specialCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.2)",
+  },
+  specialIcon: { width: 50, height: 50, marginRight: 12 },
+  specialTextContainer: { flex: 1 },
+  specialTitle: { color: "#fff", fontSize: 16, fontWeight: "bold" },
+  specialSubtitle: { color: "#E3D7FF", fontSize: 13 },
+  noInternetContainer: { flex: 1, justifyContent: "center", alignItems: "center", marginTop: 100 },
+  noInternetText: { fontSize: 20, fontWeight: "bold", color: TEXT_LIGHT },
+  noInternetSubText: { fontSize: 16, color: "#CBB7F4", marginTop: 10 },
+  noResults: { alignItems: "center", paddingVertical: 40 },
+  noResultsText: { color: "#D0BFFF", fontSize: 16 },
+  qrSection: { marginTop: 20, alignItems: "center", marginBottom: 60 },
+  qrTitle: { color: TEXT_LIGHT, fontSize: 20, fontWeight: "700", textAlign: "center" },
+  qrSubTitle: { color: "#D6C6FF", fontSize: 14, marginBottom: 10 },
+  qrCard: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 16,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 6,
+    width: "90%",
+  },
+  qrUpiText: { color: "#3C1E70", fontWeight: "600", fontSize: 15, marginBottom: 10 },
+  maskWrapper: {
+    width: 260,
+    height: 280,
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+    backgroundColor: "#fff",
+    borderRadius: 12,
+  },
+  qrImage: { width: 240 },
+  revealOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "#ffffff",
+  },
+  scanLine: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    height: 28,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderTopColor: "rgba(255,255,255,0.2)",
+    borderBottomColor: "rgba(255,255,255,0.1)",
+  },
+  qrBottomText: { color: "#3C1E70", marginTop: 10, fontSize: 13 },
+});
+
+const searchStyles = StyleSheet.create({
+  container: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: LIGHT_VIOLET,
+    borderRadius: 10,
+    paddingHorizontal: 15,
+    marginVertical: 15,
+    height: 48,
+    elevation: 4,
+  },
+  icon: { marginRight: 10 },
+  input: { flex: 1, fontSize: 16, color: "#fff", paddingVertical: 0 },
+  clearButton: { padding: 5, marginLeft: 10 },
 });
 
 
-const modalStyles = StyleSheet.create({
-  centeredView: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.6)", // Slightly lighter overlay
-  },
-  modalView: {
-    backgroundColor: "white",
-    borderRadius: 15, 
-    padding: 30,
-    alignItems: "center",
-    width: "90%",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.1, // Softer shadow
-    shadowRadius: 10,
-    elevation: 10,
-    marginTop: 50,
-    borderWidth: 2,
-    borderColor: '#108da3ff', // Very light border
-  },
-  iconHeader: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 20,
-    marginTop: -80,
-    shadowColor: PRIMARY_COLOR,
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.6,
-    shadowRadius: 10,
-    elevation: 10,
-  },
-  modalImage: {
-    width: 85,
-    height: 65,
-  },
-  modalHeading: {
-    fontSize: 26, 
-    fontWeight: "900",
-    color: "#2c3e50",
-    marginBottom: 5,
-  },
-  modalText: {
-    textAlign: "center",
-    fontSize: 16,
-    fontWeight: "500",
-    color: "#7f8c8d",
-    lineHeight: 22,
-    marginBottom: 25, 
-  },
-  closeButton: {
-    position: "absolute",
-    top: 15,
-    right: 15,
-    padding: 5,
-    zIndex: 10,
-  },
-  closeButtonText: { fontSize: 28, fontWeight: "300", color: "#95a5a6" },
-
-  // --- STYLISH ACCORDION STYLES (Softened) ---
-  accordionHeader: {
+// 🎠 Banner Carousel Styles
+const carouselStyles = StyleSheet.create({
+  container: {
+    height: 160,
     width: "100%",
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    marginTop: 5,
-    backgroundColor: '#f8f9fa', // Off-white/light background
-    borderRadius: 8, // Softer radius
-    borderWidth: 1,
-    borderColor: '#dcdcdc', // Lighter border
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05, // Very light shadow
-    shadowRadius: 3,
-    elevation: 1,
-  },
-  noteLabel: {
-    fontSize: 13, // Slightly smaller font for a cleaner look
-    fontWeight: '600',
-    color: '#34495e',
-  },
-  arrowIcon: {
-    fontSize: 15,
-    color:'#c2c3c4ff' ,
-    fontWeight: '900',
-  },
-  accordionContent: {
-    width: "100%",
-    marginTop: 8,
-    marginBottom: 10,
-  },
-  inputField: {
-    width: "100%",
-    minHeight: 90, 
-    borderColor: '#dcdcdc',
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 15,
-    fontSize: 16,
-    color: '#34495e',
-    backgroundColor: '#fff',
-    textAlignVertical: 'top',
-  },
-  
-  // --- Proceed Button (Sleek, Full Gradient) ---
-  markAttendanceButtonWrapper: {
-    width: "100%",
-    marginTop: 30,
-    borderRadius: 10,
+    borderRadius: 12,
     overflow: "hidden",
-    shadowColor: PRIMARY_COLOR,
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
-    elevation: 10,
+    marginBottom: 15,
   },
-  markAttendanceButton: {
-    paddingVertical: 18,
-    alignItems: "center",
+  image: {
+    width: width - 32,
+    height: 160,
+    borderRadius: 12,
+    marginHorizontal: 16,
   },
-  markAttendanceButtonText: {
-    color: "Green",
-    fontWeight: "bold",
-    textAlign: "center",
-    fontSize: 19,
-    letterSpacing: 1,
+  indicatorContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    marginTop: 8,
+  },
+  dot: {
+    height: 8,
+    width: 8,
+    borderRadius: 4,
+    backgroundColor: "#fff",
+    marginHorizontal: 4,
   },
 });
 

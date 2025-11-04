@@ -128,6 +128,7 @@ const EnrollCustomer = ({ route, navigation }) => {
       return;
     }
 
+
     if (Number(formFields.no_of_tickets) > availableTickets.length) {
       ToastAndroid.show(
         "Number of tickets exceeds available count.",
@@ -397,6 +398,7 @@ const styles = StyleSheet.create({
   submitButton: {
     marginTop: 25,
     borderRadius: 25,
+    backgroundColor:"#7b2ff7",
   },
   modalHeader: {
     flexDirection: "row",
