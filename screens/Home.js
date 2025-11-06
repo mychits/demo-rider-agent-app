@@ -7,9 +7,12 @@ import {
   TouchableOpacity,
   Dimensions,
   Image,
+  Modal, // 💡 REQUIRED IMPORT for Modal
   Animated,
   Easing,
   TextInput,
+  ToastAndroid, // 💡 REQUIRED IMPORT for showing messages
+  ActivityIndicator, // 💡 REQUIRED IMPORT for loading state
   Platform,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -29,30 +32,153 @@ const ACCENT_VIOLET = "#8A56D3";
 const TEXT_LIGHT = "#F5F1FF";
 const CARD_BG = "#4E2A86";
 
+// 💡 ATTENDANCE CONSTANTS (from first file, adapted for violet theme)
+const PRIMARY_GRADIENT_START = "#8A56D3"; // ACCENT_VIOLET
+const PRIMARY_GRADIENT_END = "#5B2E9B"; // LIGHT_VIOLET
+const ATTENDANCE_SUBMIT_URL = `${baseUrl}/employee-attendance/punch`;
+
 // 🖼️ Card Images
 const cardImagePaths = {
-  attendence: require("../assets/ab.png"),
-  collections: require("../assets/Collection2.png"),
+  attendence: require("../assets/attendence.png"),
+  collections: require("../assets/amtcollection.png"),
   qrCode: require("../assets/qr-code.png"),
-  daybook: require("../assets/Daybook2.png"),
-  targets: require("../assets/Target2.png"),
-  myLeads: require("../assets/Lead1.png"),
-  addCustomers: require("../assets/AddCutomer1.png"),
+  daybook: require("../assets/eventreminder.png"),
+  targets: require("../assets/thetargeted.png"),
+  myLeads: require("../assets/theLead.png"),
+  addCustomers: require("../assets/theadd.png"),
   myCustomers: require("../assets/Mycustomers1.png"),
   myTasks: require("../assets/Target2.png"),
   reports: require("../assets/Reports2.png"),
-  commission: require("../assets/commissions1.png"),
+  commission: require("../assets/thecommission.png"),
   groups: require("../assets/groups1.png"),
   customerOnHold: require("../assets/Holdon2.png"),
-  monthlyTurnover: require("../assets/MITB.png"),
+  monthlyTurnover: require("../assets/month.png"),
   DueReportImage: require("../assets/dues.png"),
-  refer: require("../assets/refer.png"), // 🔹 Add your icon image here 
-  rewards: require("../assets/rewards.png"), // 🔹 Add your icon image here
+  refer: require("../assets/refer.png"),
+  rewards: require("../assets/rewards.png"),
   subscriptions: require("../assets/subscribe.png"),
-   mychit: require("../assets/chit.png"), // you can replace with your own
+  mychit: require("../assets/chit.png"),
   gold: require("../assets/gold.png"),
   loan: require("../assets/loan.png"),
   pigmy: require("../assets/pigme.png"),
+};
+
+// 💡 ATTENDANCE MODAL COMPONENT (Copied and styled for violet theme)
+const AttendanceModal = ({
+  attendanceLoading,
+  selectedStatus,
+  visible,
+  message,
+  onClose,
+  handleSubmitAttendance,
+  note,
+  setNote,
+}) => {
+  const [isNoteOpen, setIsNoteOpen] = useState(false);
+  const scaleAnim = useState(new Animated.Value(0.5))[0];
+
+  useEffect(() => {
+    if (visible) {
+      scaleAnim.setValue(0.5);
+      Animated.timing(scaleAnim, {
+        toValue: 1,
+        duration: 300,
+        easing: Easing.out(Easing.back(1.7)),
+        useNativeDriver: true,
+      }).start();
+      setIsNoteOpen(false);
+      setNote("");
+    }
+  }, [visible]);
+
+  const animatedImageStyle = {
+    transform: [{ scale: scaleAnim }],
+  };
+
+  return (
+    <Modal
+      animationType="fade"
+      transparent={true}
+      visible={visible}
+      onRequestClose={onClose}
+    >
+      <View style={modalStyles.centeredView}>
+        <View style={modalStyles.modalView}>
+          <TouchableOpacity style={modalStyles.closeButton} onPress={onClose}>
+            <Text style={modalStyles.closeButtonText}>✕</Text>
+          </TouchableOpacity>
+
+          <LinearGradient
+            colors={[PRIMARY_GRADIENT_START, PRIMARY_GRADIENT_END]}
+            style={modalStyles.iconHeader}
+          >
+            <Animated.Image
+              source={cardImagePaths.attendence}
+              style={[modalStyles.modalImage, animatedImageStyle]}
+              resizeMode="contain"
+            />
+          </LinearGradient>
+
+          <Text style={modalStyles.modalHeading}>Daily Status Check</Text>
+          <Text style={modalStyles.modalText}>{message}</Text>
+
+          {/* STYLISH ACCORDION HEADER (NOTE - OPTIONAL) */}
+          <TouchableOpacity
+            style={modalStyles.accordionHeader}
+            onPress={() => setIsNoteOpen(!isNoteOpen)}
+            activeOpacity={0.8}
+          >
+            <Text style={modalStyles.noteLabel}>
+              {isNoteOpen ? "Hide Note" : "Add a Note (Optional)"}
+            </Text>
+            <Text style={modalStyles.arrowIcon}>
+              {isNoteOpen ? "▲" : "▼"}
+            </Text>
+          </TouchableOpacity>
+
+          {/* ACCORDION CONTENT (TEXT INPUT) */}
+          {isNoteOpen && (
+            <View style={modalStyles.accordionContent}>
+              <TextInput
+                style={modalStyles.inputField}
+                placeholder="e.g., Working remotely today..."
+                placeholderTextColor="#a0a0a0"
+                value={note}
+                onChangeText={setNote}
+                multiline
+              />
+            </View>
+          )}
+          {/* END ACCORDION */}
+
+          <TouchableOpacity
+            disabled={!selectedStatus || attendanceLoading}
+            onPress={handleSubmitAttendance}
+            style={modalStyles.markAttendanceButtonWrapper}
+          >
+            <LinearGradient
+              colors={
+                !selectedStatus
+                  ? ["#B0B0B0", "#909090"]
+                  : [PRIMARY_GRADIENT_START, PRIMARY_GRADIENT_END]
+              }
+              start={{ x: 0, y: 0.5 }}
+              end={{ x: 1, y: 0.5 }}
+              style={modalStyles.markAttendanceButton}
+            >
+              {attendanceLoading ? (
+                <ActivityIndicator size={"small"} color={"#fff"} />
+              ) : (
+                <Text style={modalStyles.markAttendanceButtonText}>
+                  PRESENT
+                </Text>
+              )}
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
 };
 
 // 🔍 Search Bar Component
@@ -95,7 +221,7 @@ const BannerCarousel = () => {
     const interval = setInterval(() => {
       const nextIndex = (currentIndex + 1) % banners.length;
       setCurrentIndex(nextIndex);
-      scrollRef.current?.scrollTo({ x: nextIndex * width, animated: true });
+      scrollRef.current?.scrollTo({ x: nextIndex * (width - 32), animated: true }); // Adjusted width for margin
     }, 3000);
     return () => clearInterval(interval);
   }, [currentIndex]);
@@ -112,6 +238,7 @@ const BannerCarousel = () => {
           [{ nativeEvent: { contentOffset: { x: scrollX } } }],
           { useNativeDriver: false }
         )}
+        contentContainerStyle={{ paddingHorizontal: 16 }} // Apply padding here
       >
         {banners.map((image, index) => (
           <Image
@@ -126,14 +253,16 @@ const BannerCarousel = () => {
         {banners.map((_, index) => {
           const opacity = scrollX.interpolate({
             inputRange: [
-              (index - 1) * width,
-              index * width,
-              (index + 1) * width,
+              (index - 1) * (width - 32),
+              index * (width - 32),
+              (index + 1) * (width - 32),
             ],
             outputRange: [0.3, 1, 0.3],
             extrapolate: "clamp",
           });
-          return <Animated.View key={index} style={[carouselStyles.dot, { opacity }]} />;
+          return (
+            <Animated.View key={index} style={[carouselStyles.dot, { opacity }]} />
+          );
         })}
       </View>
     </View>
@@ -141,7 +270,7 @@ const BannerCarousel = () => {
 };
 
 const Home = ({ route, navigation }) => {
-  const { user = {} } = route.params || {};
+  const { user = {}, agentInfo = {} } = route.params || {}; // 💡 Added agentInfo
   const { setModifyPayment } = useContext(AgentContext);
   const [agent, setAgent] = useState({});
   const [searchQuery, setSearchQuery] = useState("");
@@ -149,9 +278,16 @@ const Home = ({ route, navigation }) => {
   const cardAnimations = useRef([]);
   const revealAnim = useRef(new Animated.Value(0)).current;
   const scanLineAnim = useRef(new Animated.Value(0)).current;
-  const qrCodeImage = require("../assets/kotak_bank_qr.jpeg");
+  const qrCodeImage = require("../assets/upi_qr.png");
 
-  // All Cards
+  // 💡 ATTENDANCE STATE (from first file)
+  const [selectedStatus, setSelectedStatus] = useState("Present");
+  const [showAttendanceModal, setShowAttendanceModal] = useState(false);
+  const [attendanceMessage, setAttendanceMessage] = useState("");
+  const [attendanceLoading, setAttendanceLoading] = useState(false);
+  const [note, setNote] = useState("");
+
+  // All Cards (Filtered by permissions from agentInfo, and added Attendance card)
   const rawCardsData = [
     { id: "monthlyTurnover", name: "Monthly Turnover", imagePath: cardImagePaths.monthlyTurnover, onPress: () => navigation.navigate("MonthlyTurnover") },
     { id: "collections", name: "Collections", imagePath: cardImagePaths.collections, onPress: () => navigation.navigate("PaymentNavigator") },
@@ -167,7 +303,10 @@ const Home = ({ route, navigation }) => {
     { id: "reports", name: "Reports", imagePath: cardImagePaths.reports, onPress: () => navigation.navigate("PayNavigation", { screen: "Reports", params: { user } }) },
     { id: "groups", name: "Groups", imagePath: cardImagePaths.groups, onPress: () => navigation.navigate("Enrollment", { screen: "Enrollment", params: { user } }) },
     { id: "DueReport", name: "Due Report", imagePath: cardImagePaths.DueReportImage, onPress: () => navigation.navigate("PayNavigation", { screen: "Due", params: { user } }) },
-  ];
+    {id: "attendence",name: "Attendance",imagePath: cardImagePaths.attendence,onPress: () => navigation.navigate("Attendance", { user }),
+
+    },
+  ].filter(Boolean); // Filter out false/null values from conditional cards
 
   const cardsData = rawCardsData.filter((card) =>
     card.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -195,12 +334,83 @@ const Home = ({ route, navigation }) => {
     }
   }, [cardsData, netInfo.isConnected]);
 
+  // 💡 HANDLE ATTENDANCE SUBMISSION (from first file)
+  const handleSubmitAttendance = async () => {
+    try {
+      setAttendanceLoading(true);
+
+      const response = await axios.post(ATTENDANCE_SUBMIT_URL, {
+        employee_id: user?.userId,
+        status: selectedStatus, // "Present"
+        method: "No Auth",
+        type: "in",
+        note: note,
+      });
+      const responseMessage = response?.data?.message;
+      ToastAndroid.show(
+        responseMessage ? responseMessage : "Attendance Marked Successfully",
+        ToastAndroid.SHORT
+      );
+    } catch (error) {
+      console.log(error, "error");
+      ToastAndroid.show("Failed to Mark Attendance", ToastAndroid.SHORT);
+    } finally {
+      setAttendanceLoading(false);
+      setShowAttendanceModal(false);
+      setNote("");
+    }
+  };
+
+
+  // 💡 CHECK ATTENDANCE STATUS (from first file)
+  useEffect(() => {
+    const checkAttendance = async () => {
+      const ATTENDANCE_MODAL_URL = `${baseUrl}/employee-attendance/modal`;
+
+      const body = {
+        employee_id: user.userId,
+      };
+
+      try {
+        const response = await axios.post(ATTENDANCE_MODAL_URL, { ...body });
+        const data = response.data;
+        console.log(" Attendance API Response:", data);
+
+        if (data?.showModal === true) {
+          setAttendanceMessage(data.message || "Eligible to mark attendance");
+          setShowAttendanceModal(true);
+        } else if (data?.message) {
+          setShowAttendanceModal(false);
+        } else {
+          setShowAttendanceModal(false);
+        }
+      } catch (error) {
+        const errorMessage =
+          error.response?.data?.message || error.message;
+
+        if (errorMessage !== "Attendance Already Marked") {
+          console.error(
+            "❌ Error checking attendance status:",
+            errorMessage
+          );
+        } else {
+          console.info("✅ Attendance check complete:", errorMessage);
+        }
+        setShowAttendanceModal(false);
+      }
+    };
+
+    if (user.userId && netInfo.isConnected) checkAttendance();
+  }, [user.userId, netInfo.isConnected]);
+
   // Fetch Agent
   useEffect(() => {
     const fetchAgent = async () => {
       if (user.userId) {
         try {
-          const response = await axios.get(`${baseUrl}/agent/get-agent-by-id/${user.userId}`);
+          const response = await axios.get(
+            `${baseUrl}/agent/get-agent-by-id/${user.userId}`
+          );
           if (response.data) setAgent(response.data);
         } catch (error) {
           console.error("Error fetching agent:", error);
@@ -209,6 +419,15 @@ const Home = ({ route, navigation }) => {
     };
     if (netInfo.isConnected) fetchAgent();
   }, [user.userId, netInfo.isConnected]);
+
+  // Set Modify Payment Permission
+  useEffect(() => {
+    if (agentInfo?.designation_id?.permission) {
+      setModifyPayment(
+        agentInfo.designation_id.permission.modify_payments === "true"
+      );
+    }
+  }, [agentInfo, setModifyPayment]);
 
   // QR Animation
   useEffect(() => {
@@ -224,14 +443,30 @@ const Home = ({ route, navigation }) => {
           useNativeDriver: false,
         })
       );
-      seq.push(Animated.timing(new Animated.Value(0), { toValue: 0, duration: 40, useNativeDriver: false }));
+      seq.push(
+        Animated.timing(new Animated.Value(0), {
+          toValue: 0,
+          duration: 40,
+          useNativeDriver: false,
+        })
+      );
     }
     Animated.sequence(seq).start();
 
     const loopScanner = Animated.loop(
       Animated.sequence([
-        Animated.timing(scanLineAnim, { toValue: 1, duration: 900, easing: Easing.linear, useNativeDriver: true }),
-        Animated.timing(scanLineAnim, { toValue: 0, duration: 100, easing: Easing.linear, useNativeDriver: true }),
+        Animated.timing(scanLineAnim, {
+          toValue: 1,
+          duration: 900,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scanLineAnim, {
+          toValue: 0,
+          duration: 100,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }),
       ])
     );
     loopScanner.start();
@@ -255,19 +490,26 @@ const Home = ({ route, navigation }) => {
         <Text style={styles.welcomeText}>Hello {agent.name || "Agent"},</Text>
         <Text style={styles.subText}>Welcome to MyChits Agent App</Text>
 
-        {netInfo.isConnected && <SearchBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />}
-
-        {/* 🖼️ Banner Carousel Section */}
-        {netInfo.isConnected && <BannerCarousel />}
+        {netInfo.isConnected && (
+          <SearchBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
+        )}
 
         {!netInfo.isConnected ? (
           <View style={styles.noInternetContainer}>
             <Text style={styles.noInternetText}>No internet connection.</Text>
-            <Text style={styles.noInternetSubText}>Please check your network.</Text>
+            <Text style={styles.noInternetSubText}>
+              Please check your network.
+            </Text>
           </View>
         ) : (
-          <ScrollView contentContainerStyle={styles.scrollView}>
-            {/* Cards */}
+          <ScrollView
+            contentContainerStyle={styles.scrollView}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* 🖼️ Banner Carousel */}
+            <BannerCarousel />
+
+            {/* 🔹 Cards Grid */}
             <View style={styles.cardsGrid}>
               {cardsData.length > 0 ? (
                 cardsData.map((card, index) => {
@@ -279,10 +521,17 @@ const Home = ({ route, navigation }) => {
                   return (
                     <Animated.View
                       key={card.id}
-                      style={[styles.cardWrapper, { opacity, transform: [{ scale }] }]}
+                      style={[
+                        styles.cardWrapper,
+                        { opacity, transform: [{ scale }] },
+                      ]}
                     >
                       <TouchableOpacity style={styles.card} onPress={card.onPress}>
-                        <Image source={card.imagePath} style={styles.cardImage} resizeMode="contain" />
+                        <Image
+                          source={card.imagePath}
+                          style={styles.cardImage}
+                          resizeMode="contain"
+                        />
                         <Text style={styles.cardText}>{card.name}</Text>
                       </TouchableOpacity>
                     </Animated.View>
@@ -290,65 +539,111 @@ const Home = ({ route, navigation }) => {
                 })
               ) : (
                 <View style={styles.noResults}>
-                  <Text style={styles.noResultsText}>No modules found for "{searchQuery}"</Text>
+                  <Text style={styles.noResultsText}>
+                    No modules found for "{searchQuery}"
+                  </Text>
                 </View>
               )}
             </View>
 
-            {/* 🌟 NEW SECTION: REFER & REWARDS */}
+            {/* 🌟 Special Section */}
             <View style={styles.specialCardContainer}>
-              <TouchableOpacity style={styles.specialCard} onPress={() => navigation.navigate("ReferAndEarn")}>
-                <Image source={cardImagePaths.refer} style={styles.specialIcon} resizeMode="contain" />
+              <TouchableOpacity
+                style={styles.specialCard}
+                onPress={() => navigation.navigate("ReferAndEarn")}
+              >
+                <Image
+                  source={cardImagePaths.refer}
+                  style={styles.specialIcon}
+                  resizeMode="contain"
+                />
                 <View style={styles.specialTextContainer}>
                   <Text style={styles.specialTitle}>Refer & Earn</Text>
-                  <Text style={styles.specialSubtitle}>Invite friends and earn rewards</Text>
+                  <Text style={styles.specialSubtitle}>
+                    Invite friends and earn rewards
+                  </Text>
                 </View>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.specialCard} onPress={() => navigation.navigate("Rewards")}>
-                <Image source={cardImagePaths.rewards} style={styles.specialIcon} resizeMode="contain" />
+              <TouchableOpacity
+                style={styles.specialCard}
+                onPress={() => navigation.navigate("Rewards")}
+              >
+                <Image
+                  source={cardImagePaths.rewards}
+                  style={styles.specialIcon}
+                  resizeMode="contain"
+                />
                 <View style={styles.specialTextContainer}>
                   <Text style={styles.specialTitle}>Rewards</Text>
-                  <Text style={styles.specialSubtitle}>Check your earned points & perks</Text>
+                  <Text style={styles.specialSubtitle}>
+                    Check your earned points & perks
+                  </Text>
                 </View>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.specialCard} onPress={() => navigation.navigate("RouteCustomerChit")}>
-                <Image source={cardImagePaths.subscriptions} style={styles.specialIcon} resizeMode="contain" />
+
+              <TouchableOpacity
+                style={styles.specialCard}
+                onPress={() => navigation.navigate("RouteCustomerChit")}
+              >
+                <Image
+                  source={cardImagePaths.subscriptions}
+                  style={styles.specialIcon}
+                  resizeMode="contain"
+                />
                 <View style={styles.specialTextContainer}>
                   <Text style={styles.specialTitle}>Subscriptions</Text>
-                  <Text style={styles.specialSubtitle}>Stay updated with your plans and earned perks</Text>
+                  <Text style={styles.specialSubtitle}>
+                    Stay updated with your plans and perks
+                  </Text>
                 </View>
               </TouchableOpacity>
-              
-
             </View>
-            
-<View style={styles.mychitSection}>
-  <Text style={styles.mychitHeader}>Add Payments </Text>
-  <View style={styles.mychitGrid}>
-    {[
-      { id: "mychit", title: "MyChit", img: cardImagePaths.mychit, screen: "RouteCustomerChit" },
-      { id: "gold", title: "Gold", img: cardImagePaths.gold, screen: "RouteCustomerGold" },
-      { id: "loan", title: "Loan", img: cardImagePaths.loan, screen: "RouteCustomerLoan" },
-      { id: "pigmy", title: "Pigmy", img: cardImagePaths.pigmy, screen: "RouteCustomerPigme" },
-    ].map((item) => (
-      <TouchableOpacity
-        key={item.id}
-        style={styles.mychitCard}
-        activeOpacity={0.8}
-        onPress={() => navigation.navigate(item.screen)}
-      >
-        <Image source={item.img} style={styles.mychitIcon} />
-        <Text style={styles.mychitText}>{item.title}</Text>
-      </TouchableOpacity>
-    ))}
-  </View>
-</View>
 
+            {/* 💰 MyChit Section */}
+            <View style={styles.mychitSection}>
+              <Text style={styles.mychitHeader}>Add Payments</Text>
+              <View style={styles.mychitGrid}>
+                {[
+                  {
+                    id: "mychit",
+                    title: "MyChit",
+                    img: cardImagePaths.mychit,
+                    screen: "RouteCustomerChit",
+                  },
+                  {
+                    id: "gold",
+                    title: "Gold",
+                    img: cardImagePaths.gold,
+                    screen: "RouteCustomerGold",
+                  },
+                  {
+                    id: "loan",
+                    title: "Loan",
+                    img: cardImagePaths.loan,
+                    screen: "RouteCustomerLoan",
+                  },
+                  {
+                    id: "pigmy",
+                    title: "Pigmy",
+                    img: cardImagePaths.pigmy,
+                    screen: "RouteCustomerPigme",
+                  },
+                ].map((item) => (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={styles.mychitCard}
+                    activeOpacity={0.8}
+                    onPress={() => navigation.navigate(item.screen, { user })}
+                  >
+                    <Image source={item.img} style={styles.mychitIcon} />
+                    <Text style={styles.mychitText}>{item.title}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
 
-
-
-            {/* ✅ QR SCANNER SECTION BELOW */}
+            {/* 🧾 QR Section */}
             <View style={styles.qrSection}>
               <Text style={styles.qrTitle}>MyChits Payment QR Code</Text>
               <Text style={styles.qrSubTitle}>Scan and pay via Kotak UPI</Text>
@@ -356,25 +651,53 @@ const Home = ({ route, navigation }) => {
               <View style={styles.qrCard}>
                 <Text style={styles.qrUpiText}>UPI ID: mychits@kotak</Text>
                 <View style={styles.maskWrapper}>
-                  <Image source={qrCodeImage} style={[styles.qrImage, { height: containerHeight }]} />
-                  <Animated.View
-                    style={[styles.revealOverlay, { height: Animated.subtract(containerHeight, revealHeight) }]}
+                  <Image
+                    source={qrCodeImage}
+                    style={[styles.qrImage, { height: containerHeight }]}
                   />
                   <Animated.View
-                    style={[styles.scanLine, { transform: [{ translateY: scanTranslateY }] }]}
+                    style={[
+                      styles.revealOverlay,
+                      {
+                        height: Animated.subtract(
+                          containerHeight,
+                          revealHeight
+                        ),
+                      },
+                    ]}
+                  />
+                  <Animated.View
+                    style={[
+                      styles.scanLine,
+                      { transform: [{ translateY: scanTranslateY }] },
+                    ]}
                   />
                 </View>
-                <Text style={styles.qrBottomText}>Powered by Kotak Mahindra Bank</Text>
+                <Text style={styles.qrBottomText}>
+                  Powered by Kotak Mahindra Bank
+                </Text>
               </View>
             </View>
+            {/* 🔮 Info Section (above QR) */}
           </ScrollView>
         )}
       </View>
+      {/* 💡 ATTENDANCE MODAL RENDER (from first file) */}
+      <AttendanceModal
+        attendanceLoading={attendanceLoading}
+        selectedStatus={selectedStatus}
+        visible={showAttendanceModal}
+        message={attendanceMessage}
+        onClose={() => setShowAttendanceModal(false)}
+        handleSubmitAttendance={handleSubmitAttendance}
+        note={note}
+        setNote={setNote}
+      />
     </LinearGradient>
   );
 };
 
-// 💜 Styles
+// 💜 Styles (Unchanged from second file, only added modalStyles for the new component)
 const styles = StyleSheet.create({
   container: { flex: 1 },
   contentWrapper: { flex: 1, marginHorizontal: 16, marginTop: 40 },
@@ -416,8 +739,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   mychitSection: {
-   
-   
     padding: 12,
     marginBottom: 30,
   },
@@ -446,7 +767,6 @@ const styles = StyleSheet.create({
   },
   mychitIcon: { width: 60, height: 60, marginBottom: 8 },
   mychitText: { color: "#fff", fontSize: 15, fontWeight: "600" },
-  // 💎 Special Refer & Rewards Section
   specialCardContainer: {
     marginTop: 10,
     marginBottom: 30,
@@ -463,17 +783,145 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "rgba(255,255,255,0.2)",
   },
+  cardRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginHorizontal: 16,
+    marginBottom: 12,
+  },
+  rewardsCard: {
+    backgroundColor: "#fff",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderRadius: 16,
+    width: "48%",
+    padding: 14,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: "#f0f0f0",
+  },
+  rewardsTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#2e1065",
+  },
+  rewardsSubtitle: {
+    fontSize: 13,
+    color: "#666",
+  },
+  rewardsImage: {
+    width: 45,
+    height: 45,
+  },
+  referCard: {
+    backgroundColor: "#fff",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderRadius: 16,
+    width: "48%",
+    padding: 14,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: "#e5e0ff",
+  },
+  referTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#5b21b6",
+  },
+  referSubtitle: {
+    fontSize: 13,
+    color: "#666",
+  },
+  referImage: {
+    width: 45,
+    height: 45,
+  },
+  announcementCard: {
+    backgroundColor: "#fff",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderRadius: 16,
+    width: "48%",
+    padding: 14,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: "#fef9c3",
+  },
+  announcementTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#92400e",
+  },
+  announcementSubtitle: {
+    fontSize: 13,
+    color: "#666",
+  },
+  announcementImage: {
+    width: 45,
+    height: 45,
+  },
+  schemeCard: {
+    backgroundColor: "#fff",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderRadius: 16,
+    width: "48%",
+    padding: 14,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: "#dcfce7",
+  },
+  schemeTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#166534",
+  },
+  schemeSubtitle: {
+    fontSize: 13,
+    color: "#666",
+  },
+  schemeImage: {
+    width: 45,
+    height: 45,
+  },
   specialIcon: { width: 50, height: 50, marginRight: 12 },
   specialTextContainer: { flex: 1 },
   specialTitle: { color: "#fff", fontSize: 16, fontWeight: "bold" },
   specialSubtitle: { color: "#E3D7FF", fontSize: 13 },
-  noInternetContainer: { flex: 1, justifyContent: "center", alignItems: "center", marginTop: 100 },
+  noInternetContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 100,
+  },
   noInternetText: { fontSize: 20, fontWeight: "bold", color: TEXT_LIGHT },
   noInternetSubText: { fontSize: 16, color: "#CBB7F4", marginTop: 10 },
   noResults: { alignItems: "center", paddingVertical: 40 },
   noResultsText: { color: "#D0BFFF", fontSize: 16 },
   qrSection: { marginTop: 20, alignItems: "center", marginBottom: 60 },
-  qrTitle: { color: TEXT_LIGHT, fontSize: 20, fontWeight: "700", textAlign: "center" },
+  qrTitle: {
+    color: TEXT_LIGHT,
+    fontSize: 20,
+    fontWeight: "700",
+    textAlign: "center",
+  },
   qrSubTitle: { color: "#D6C6FF", fontSize: 14, marginBottom: 10 },
   qrCard: {
     backgroundColor: "#fff",
@@ -486,7 +934,12 @@ const styles = StyleSheet.create({
     elevation: 6,
     width: "90%",
   },
-  qrUpiText: { color: "#3C1E70", fontWeight: "600", fontSize: 15, marginBottom: 10 },
+  qrUpiText: {
+    color: "#3C1E70",
+    fontWeight: "600",
+    fontSize: 15,
+    marginBottom: 10,
+  },
   maskWrapper: {
     width: 260,
     height: 280,
@@ -535,8 +988,6 @@ const searchStyles = StyleSheet.create({
   clearButton: { padding: 5, marginLeft: 10 },
 });
 
-
-// 🎠 Banner Carousel Styles
 const carouselStyles = StyleSheet.create({
   container: {
     height: 160,
@@ -549,7 +1000,7 @@ const carouselStyles = StyleSheet.create({
     width: width - 32,
     height: 160,
     borderRadius: 12,
-    marginHorizontal: 16,
+    // Removed marginHorizontal: 16 here as it's now in contentContainerStyle
   },
   indicatorContainer: {
     flexDirection: "row",
@@ -562,6 +1013,138 @@ const carouselStyles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: "#fff",
     marginHorizontal: 4,
+  },
+});
+
+// 💡 ATTENDANCE MODAL STYLES (Copied and adapted for violet theme)
+const modalStyles = StyleSheet.create({
+  centeredView: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+  },
+  modalView: {
+    backgroundColor: "white",
+    borderRadius: 15,
+    padding: 30,
+    alignItems: "center",
+    width: "90%",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 10,
+    marginTop: 50,
+    borderWidth: 2,
+    borderColor: PRIMARY_GRADIENT_END, // Violet border
+  },
+  iconHeader: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 20,
+    marginTop: -80,
+    shadowColor: PRIMARY_GRADIENT_END,
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.6,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  modalImage: {
+    width: 85,
+    height: 65,
+  },
+  modalHeading: {
+    fontSize: 26,
+    fontWeight: "900",
+    color: "#2c3e50",
+    marginBottom: 5,
+  },
+  modalText: {
+    textAlign: "center",
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#7f8c8d",
+    lineHeight: 22,
+    marginBottom: 25,
+  },
+  closeButton: {
+    position: "absolute",
+    top: 15,
+    right: 15,
+    padding: 5,
+    zIndex: 10,
+  },
+  closeButtonText: { fontSize: 28, fontWeight: "300", color: "#95a5a6" },
+  accordionHeader: {
+    width: "100%",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    marginTop: 5,
+    backgroundColor: "#f8f9fa",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#dcdcdc",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  noteLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#34495e",
+  },
+  arrowIcon: {
+    fontSize: 15,
+    color: '#c2c3c4ff',
+    fontWeight: "900",
+  },
+  accordionContent: {
+    width: "100%",
+    marginTop: 8,
+    marginBottom: 10,
+  },
+  inputField: {
+    width: "100%",
+    minHeight: 90,
+    borderColor: "#dcdcdc",
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 15,
+    fontSize: 16,
+    color: "#34495e",
+    backgroundColor: "#fff",
+    textAlignVertical: "top",
+  },
+  markAttendanceButtonWrapper: {
+    width: "100%",
+    marginTop: 30,
+    borderRadius: 10,
+    overflow: "hidden",
+    shadowColor: PRIMARY_GRADIENT_END,
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  markAttendanceButton: {
+    paddingVertical: 18,
+    alignItems: "center",
+  },
+  markAttendanceButtonText: {
+    color: TEXT_LIGHT, // White text on violet gradient
+    fontWeight: "bold",
+    textAlign: "center",
+    fontSize: 19,
+    letterSpacing: 1,
   },
 });
 

@@ -20,7 +20,7 @@ const COLORS = {
 };
 
 const QrScannerRevealPage = () => {
-  const qrCodeImage = require("../assets/kotak_bank_qr.jpeg");
+  const qrCodeImage = require("../assets/upi_qr.png");
 
   // Controls overall reveal height (0 -> fullHeight)
   const revealAnim = useRef(new Animated.Value(0)).current;
