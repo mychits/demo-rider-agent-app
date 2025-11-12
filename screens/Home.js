@@ -7,14 +7,16 @@ import {
   TouchableOpacity,
   Dimensions,
   Image,
-  Modal, // 💡 REQUIRED IMPORT for Modal
+  Modal,
   Animated,
   Easing,
   TextInput,
-  ToastAndroid, // 💡 REQUIRED IMPORT for showing messages
-  ActivityIndicator, // 💡 REQUIRED IMPORT for loading state
+  ToastAndroid,
+  ActivityIndicator,
   Platform,
 } from "react-native";
+// 💡 REQUIRED FOR AUTO-LOGIN CHECK: Import AsyncStorage (Ensure you have installed: @react-native-async-storage/async-storage)
+import AsyncStorage from '@react-native-async-storage/async-storage'; 
 import { LinearGradient } from "expo-linear-gradient";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import axios from "axios";
@@ -32,9 +34,9 @@ const ACCENT_VIOLET = "#8A56D3";
 const TEXT_LIGHT = "#F5F1FF";
 const CARD_BG = "#4E2A86";
 
-// 💡 ATTENDANCE CONSTANTS (from first file, adapted for violet theme)
-const PRIMARY_GRADIENT_START = "#8A56D3"; // ACCENT_VIOLET
-const PRIMARY_GRADIENT_END = "#5B2E9B"; // LIGHT_VIOLET
+// 💡 ATTENDANCE CONSTANTS
+const PRIMARY_GRADIENT_START = "#8A56D3";
+const PRIMARY_GRADIENT_END = "#5B2E9B";
 const ATTENDANCE_SUBMIT_URL = `${baseUrl}/employee-attendance/punch`;
 
 // 🖼️ Card Images
@@ -63,7 +65,7 @@ const cardImagePaths = {
   pigmy: require("../assets/pigme.png"),
 };
 
-// 💡 ATTENDANCE MODAL COMPONENT (Copied and styled for violet theme)
+// 💡 ATTENDANCE MODAL COMPONENT (Unchanged)
 const AttendanceModal = ({
   attendanceLoading,
   selectedStatus,
@@ -181,7 +183,7 @@ const AttendanceModal = ({
   );
 };
 
-// 🔍 Search Bar Component
+// 🔍 Search Bar Component (Unchanged)
 const SearchBar = ({ searchQuery, setSearchQuery }) => (
   <View style={searchStyles.container}>
     <Icon name="search" size={22} color="#fff" style={searchStyles.icon} />
@@ -203,7 +205,7 @@ const SearchBar = ({ searchQuery, setSearchQuery }) => (
   </View>
 );
 
-// 🖼️ Banner Carousel Component
+// 🖼️ Banner Carousel Component (Unchanged)
 const BannerCarousel = () => {
   const scrollX = useRef(new Animated.Value(0)).current;
   const scrollRef = useRef(null);
@@ -270,8 +272,19 @@ const BannerCarousel = () => {
 };
 
 const Home = ({ route, navigation }) => {
-  const { user = {}, agentInfo = {} } = route.params || {}; // 💡 Added agentInfo
+  // 1. 💡 REPLACED DESTRUCTURING with STATE HOOKS for session management
+  const initialUser = route.params?.user || {};
+  const initialAgentInfo = route.params?.agentInfo || {};
+  
   const { setModifyPayment } = useContext(AgentContext);
+  const [userState, setUserState] = useState(initialUser); // State for User data
+  const [agentState, setAgentState] = useState(initialAgentInfo); // State for AgentInfo
+
+  // 2. 💡 AUTO-LOGIN/SESSION CHECKING STATE
+  const [isCheckingLogin, setIsCheckingLogin] = useState(
+    !initialUser.userId // Start checking if user ID is missing from route params
+  );
+
   const [agent, setAgent] = useState({});
   const [searchQuery, setSearchQuery] = useState("");
   const netInfo = useNetInfo();
@@ -280,39 +293,74 @@ const Home = ({ route, navigation }) => {
   const scanLineAnim = useRef(new Animated.Value(0)).current;
   const qrCodeImage = require("../assets/upi_qr.png");
 
-  // 💡 ATTENDANCE STATE (from first file)
+  // 💡 ATTENDANCE STATE
   const [selectedStatus, setSelectedStatus] = useState("Present");
   const [showAttendanceModal, setShowAttendanceModal] = useState(false);
   const [attendanceMessage, setAttendanceMessage] = useState("");
   const [attendanceLoading, setAttendanceLoading] = useState(false);
   const [note, setNote] = useState("");
 
-  // All Cards (Filtered by permissions from agentInfo, and added Attendance card)
+
+  // 3. 💡 AUTO-LOGIN/SESSION REVALIDATION EFFECT
+  useEffect(() => {
+    // Only run if initial user data is missing
+    if (!initialUser.userId) {
+      const revalidateSession = async () => {
+        try {
+          const userData = await AsyncStorage.getItem("user");
+          const agentData = await AsyncStorage.getItem("agentInfo");
+
+          if (userData && agentData) {
+            const user = JSON.parse(userData);
+            const agentInfo = JSON.parse(agentData);
+            
+            // Session found! Update state to re-hydrate the component
+            setUserState(user);
+            setAgentState(agentInfo);
+            setIsCheckingLogin(false); 
+          } else {
+            // No session found, must navigate to login
+            navigation.replace("Login"); // Use replace to clear the stack history
+          }
+        } catch (error) {
+          console.error("Home.js: Failed to re-validate session:", error);
+          // On error, force logout
+          navigation.replace("Login"); 
+        }
+      };
+      
+      revalidateSession();
+    } else {
+        // Initial data was present in route.params, stop checking immediately
+        setIsCheckingLogin(false);
+    }
+  }, []); // Run only on mount
+
+  // All Cards (Filtered by permissions from agentState, and added Attendance card)
   const rawCardsData = [
     { id: "monthlyTurnover", name: "Monthly Turnover", imagePath: cardImagePaths.monthlyTurnover, onPress: () => navigation.navigate("MonthlyTurnover") },
     { id: "collections", name: "Collections", imagePath: cardImagePaths.collections, onPress: () => navigation.navigate("PaymentNavigator") },
     { id: "qrCode", name: "QR Code", imagePath: cardImagePaths.qrCode, onPress: () => navigation.navigate("qrCode") },
-    { id: "daybook", name: "Daybook", imagePath: cardImagePaths.daybook, onPress: () => navigation.navigate("PayNavigation", { user }) },
-    { id: "commission", name: "Commissions", imagePath: cardImagePaths.commission, onPress: () => navigation.navigate("Commissions", { user }) },
+    { id: "daybook", name: "Daybook", imagePath: cardImagePaths.daybook, onPress: () => navigation.navigate("PayNavigation", { user: userState }) }, // 💡 Using userState
+    { id: "commission", name: "Commissions", imagePath: cardImagePaths.commission, onPress: () => navigation.navigate("Commissions", { user: userState }) }, // 💡 Using userState
     { id: "targets", name: "Targets", imagePath: cardImagePaths.targets, onPress: () => navigation.navigate("Target") },
-    { id: "myLeads", name: "My Leads", imagePath: cardImagePaths.myLeads, onPress: () => navigation.navigate("PayNavigation", { screen: "ViewLeads", params: { user } }) },
-    { id: "addCustomers", name: "Add Customers", imagePath: cardImagePaths.addCustomers, onPress: () => navigation.navigate("CustomerNavigation", { screen: "Customer", params: { user } }) },
-    { id: "myCustomers", name: "My Customers", imagePath: cardImagePaths.myCustomers, onPress: () => navigation.navigate("CustomerNavigation", { screen: "ViewEnrollments", params: { user } }) },
+    { id: "myLeads", name: "My Leads", imagePath: cardImagePaths.myLeads, onPress: () => navigation.navigate("PayNavigation", { screen: "ViewLeads", params: { user: userState } }) }, // 💡 Using userState
+    { id: "addCustomers", name: "Add Customers", imagePath: cardImagePaths.addCustomers, onPress: () => navigation.navigate("CustomerNavigation", { screen: "Customer", params: { user: userState } }) }, // 💡 Using userState
+    { id: "myCustomers", name: "My Customers", imagePath: cardImagePaths.myCustomers, onPress: () => navigation.navigate("CustomerNavigation", { screen: "ViewEnrollments", params: { user: userState } }) }, // 💡 Using userState
     { id: "customerOnHold", name: "Customer On Hold", imagePath: cardImagePaths.customerOnHold, onPress: () => navigation.navigate("CustomerOnHold") },
-    { id: "myTasks", name: "My Tasks", imagePath: cardImagePaths.myTasks, onPress: () => navigation.navigate("MyTasks", { employeeId: user.userId, agentName: agent.name }) },
-    { id: "reports", name: "Reports", imagePath: cardImagePaths.reports, onPress: () => navigation.navigate("PayNavigation", { screen: "Reports", params: { user } }) },
-    { id: "groups", name: "Groups", imagePath: cardImagePaths.groups, onPress: () => navigation.navigate("Enrollment", { screen: "Enrollment", params: { user } }) },
-    { id: "DueReport", name: "Due Report", imagePath: cardImagePaths.DueReportImage, onPress: () => navigation.navigate("PayNavigation", { screen: "Due", params: { user } }) },
-    {id: "attendence",name: "Attendance",imagePath: cardImagePaths.attendence,onPress: () => navigation.navigate("Attendance", { user }),
-
+    { id: "myTasks", name: "My Tasks", imagePath: cardImagePaths.myTasks, onPress: () => navigation.navigate("MyTasks", { employeeId: userState.userId, agentName: agent.name }) }, // 💡 Using userState
+    { id: "reports", name: "Reports", imagePath: cardImagePaths.reports, onPress: () => navigation.navigate("PayNavigation", { screen: "Reports", params: { user: userState } }) }, // 💡 Using userState
+    { id: "groups", name: "Groups", imagePath: cardImagePaths.groups, onPress: () => navigation.navigate("Enrollment", { screen: "Enrollment", params: { user: userState } }) }, // 💡 Using userState
+    { id: "DueReport", name: "Due Report", imagePath: cardImagePaths.DueReportImage, onPress: () => navigation.navigate("PayNavigation", { screen: "Due", params: { user: userState } }) }, // 💡 Using userState
+    { id: "attendence",name: "Attendance",imagePath: cardImagePaths.attendence,onPress: () => navigation.navigate("Attendance", { user: userState }), // 💡 Using userState
     },
-  ].filter(Boolean); // Filter out false/null values from conditional cards
+  ].filter(Boolean);
 
   const cardsData = rawCardsData.filter((card) =>
     card.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Animate Cards
+  // Animate Cards (Unchanged logic, runs when cardsData changes)
   if (cardAnimations.current.length !== cardsData.length) {
     cardAnimations.current = cardsData.map(
       (_, i) => cardAnimations.current[i] || new Animated.Value(0)
@@ -334,14 +382,14 @@ const Home = ({ route, navigation }) => {
     }
   }, [cardsData, netInfo.isConnected]);
 
-  // 💡 HANDLE ATTENDANCE SUBMISSION (from first file)
+  // 💡 HANDLE ATTENDANCE SUBMISSION - UPDATED to use userState
   const handleSubmitAttendance = async () => {
     try {
       setAttendanceLoading(true);
 
       const response = await axios.post(ATTENDANCE_SUBMIT_URL, {
-        employee_id: user?.userId,
-        status: selectedStatus, // "Present"
+        employee_id: userState?.userId, // 💡 Using userState
+        status: selectedStatus, 
         method: "No Auth",
         type: "in",
         note: note,
@@ -362,19 +410,18 @@ const Home = ({ route, navigation }) => {
   };
 
 
-  // 💡 CHECK ATTENDANCE STATUS (from first file)
+  // 💡 CHECK ATTENDANCE STATUS - UPDATED to use userState
   useEffect(() => {
     const checkAttendance = async () => {
       const ATTENDANCE_MODAL_URL = `${baseUrl}/employee-attendance/modal`;
 
       const body = {
-        employee_id: user.userId,
+        employee_id: userState.userId, // 💡 Using userState
       };
 
       try {
         const response = await axios.post(ATTENDANCE_MODAL_URL, { ...body });
         const data = response.data;
-        console.log(" Attendance API Response:", data);
 
         if (data?.showModal === true) {
           setAttendanceMessage(data.message || "Eligible to mark attendance");
@@ -400,16 +447,17 @@ const Home = ({ route, navigation }) => {
       }
     };
 
-    if (user.userId && netInfo.isConnected) checkAttendance();
-  }, [user.userId, netInfo.isConnected]);
+    // 💡 Run check only if userState.userId is available and we're not checking login
+    if (!isCheckingLogin && userState.userId && netInfo.isConnected) checkAttendance();
+  }, [userState.userId, netInfo.isConnected, isCheckingLogin]); // 💡 Dependency updated to userState.userId and isCheckingLogin
 
-  // Fetch Agent
+  // Fetch Agent - UPDATED to use userState
   useEffect(() => {
     const fetchAgent = async () => {
-      if (user.userId) {
+      if (userState.userId) { // 💡 Using userState
         try {
           const response = await axios.get(
-            `${baseUrl}/agent/get-agent-by-id/${user.userId}`
+            `${baseUrl}/agent/get-agent-by-id/${userState.userId}` // 💡 Using userState
           );
           if (response.data) setAgent(response.data);
         } catch (error) {
@@ -417,19 +465,19 @@ const Home = ({ route, navigation }) => {
         }
       }
     };
-    if (netInfo.isConnected) fetchAgent();
-  }, [user.userId, netInfo.isConnected]);
+    if (!isCheckingLogin && netInfo.isConnected) fetchAgent();
+  }, [userState.userId, netInfo.isConnected, isCheckingLogin]); // 💡 Dependency updated to userState.userId and isCheckingLogin
 
-  // Set Modify Payment Permission
+  // Set Modify Payment Permission - UPDATED to use agentState
   useEffect(() => {
-    if (agentInfo?.designation_id?.permission) {
+    if (agentState?.designation_id?.permission) { // 💡 Using agentState
       setModifyPayment(
-        agentInfo.designation_id.permission.modify_payments === "true"
+        agentState.designation_id.permission.modify_payments === "true"
       );
     }
-  }, [agentInfo, setModifyPayment]);
+  }, [agentState, setModifyPayment]); // 💡 Dependency updated to agentState
 
-  // QR Animation
+  // QR Animation (Unchanged)
   useEffect(() => {
     const STEPS = 8;
     const STEP_DURATION = 140;
@@ -482,6 +530,15 @@ const Home = ({ route, navigation }) => {
     inputRange: [0, 1],
     outputRange: [-20, containerHeight + 20],
   });
+
+  // 4. 💡 LOADING SCREEN CHECK
+  if (isCheckingLogin) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: DARK_VIOLET }}>
+        <ActivityIndicator size="large" color={TEXT_LIGHT} />
+      </View>
+    );
+  }
 
   return (
     <LinearGradient colors={[DARK_VIOLET, LIGHT_VIOLET]} style={styles.container}>
@@ -634,7 +691,7 @@ const Home = ({ route, navigation }) => {
                     key={item.id}
                     style={styles.mychitCard}
                     activeOpacity={0.8}
-                    onPress={() => navigation.navigate(item.screen, { user })}
+                    onPress={() => navigation.navigate(item.screen, { user: userState })} // 💡 Using userState
                   >
                     <Image source={item.img} style={styles.mychitIcon} />
                     <Text style={styles.mychitText}>{item.title}</Text>
@@ -678,11 +735,10 @@ const Home = ({ route, navigation }) => {
                 </Text>
               </View>
             </View>
-            {/* 🔮 Info Section (above QR) */}
           </ScrollView>
         )}
       </View>
-      {/* 💡 ATTENDANCE MODAL RENDER (from first file) */}
+      {/* 💡 ATTENDANCE MODAL RENDER */}
       <AttendanceModal
         attendanceLoading={attendanceLoading}
         selectedStatus={selectedStatus}
@@ -697,7 +753,7 @@ const Home = ({ route, navigation }) => {
   );
 };
 
-// 💜 Styles (Unchanged from second file, only added modalStyles for the new component)
+// 💜 STYLES (Unchanged)
 const styles = StyleSheet.create({
   container: { flex: 1 },
   contentWrapper: { flex: 1, marginHorizontal: 16, marginTop: 40 },
@@ -1000,7 +1056,6 @@ const carouselStyles = StyleSheet.create({
     width: width - 32,
     height: 160,
     borderRadius: 12,
-    // Removed marginHorizontal: 16 here as it's now in contentContainerStyle
   },
   indicatorContainer: {
     flexDirection: "row",
@@ -1016,7 +1071,7 @@ const carouselStyles = StyleSheet.create({
   },
 });
 
-// 💡 ATTENDANCE MODAL STYLES (Copied and adapted for violet theme)
+// 💡 ATTENDANCE MODAL STYLES (Unchanged)
 const modalStyles = StyleSheet.create({
   centeredView: {
     flex: 1,
@@ -1037,7 +1092,7 @@ const modalStyles = StyleSheet.create({
     elevation: 10,
     marginTop: 50,
     borderWidth: 2,
-    borderColor: PRIMARY_GRADIENT_END, // Violet border
+    borderColor: PRIMARY_GRADIENT_END,
   },
   iconHeader: {
     width: 120,
@@ -1140,7 +1195,7 @@ const modalStyles = StyleSheet.create({
     alignItems: "center",
   },
   markAttendanceButtonText: {
-    color: TEXT_LIGHT, // White text on violet gradient
+    color: TEXT_LIGHT,
     fontWeight: "bold",
     textAlign: "center",
     fontSize: 19,

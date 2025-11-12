@@ -9,7 +9,7 @@ import RNPrint from "react-native-print";
 import baseUrl from "../constants/baseUrl";
 import axios from "axios";
 
-const LoanPrint = ({ route }) => {
+const LoanRePrint = ({ route }) => {
   const {
     customer_name,
     phone_number,
@@ -27,6 +27,7 @@ const LoanPrint = ({ route }) => {
     cus_id,
     actual_loan_id,
   } = route.params;
+
 
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -167,18 +168,18 @@ Collected by: ${agent_name || "N/A"}
 
     const txnLine =
       pay_type?.toLowerCase() === "online" && transaction_id
-        ? `<p style="margin: 5px 0;">Transaction ID: ${transaction_id}</p>`
+        ? `<p style="margin: 5px ;">Transaction ID: ${transaction_id}</p>`
         : "";
 
     const htmlContent = `
       <html>
       <head>
         <style>
-          @page {
-          size: ${size} auto;
+             @page {
+            size: ${size} auto;
             margin: 0 0 0 4mm;
           }
-               body {
+          body {
             font-family: Arial, sans-serif;
             font-size: 14px;
             margin: 0;
@@ -199,9 +200,9 @@ Collected by: ${agent_name || "N/A"}
         </style>
       </head>
       <body>
-        <div class="receipt">
+           <div class="receipt">
           <div class="header">
-             <h3 style="margin-bottom: 5px;">MY CHITS</h3>
+            <h3 style="margin-bottom: 5px;">MY CHITS</h3>
           </div>
           <div style="text-align: center; font-size: 12px;">
             <p style="margin: 0;">No.11/36-25, 2nd Main,</p>
@@ -221,19 +222,18 @@ Collected by: ${agent_name || "N/A"}
         pay_date
       )}
           </p>
-          <div style="margin: 10px 0 0 0;"></div>
+          <div class="line" style="margin: 5px 0;"></div>
           <p>
             <span style="font-weight: bold;">Name:</span> ${customer_name || "N/A"
       } <br/>
             <span style="font-weight: bold;">Mobile No:</span> ${phone_number || "N/A"
       }
           </p>
-          <div style="margin: 10px 0;"></div>
+          <div class="line" style="margin: 5px 0;"></div>
           
           ${groupOrLoanHtml}
           
           <div class="line" style="margin: 5px 0;"></div>
-
           <table style="border-collapse: collapse; width: 100%; border: 1px solid #000; margin: 5px 0; font-size: 1.2em;">
             <tr>
               <td style="padding: 5px; font-weight: bold;">Received Amount</td>
@@ -242,7 +242,8 @@ Collected by: ${agent_name || "N/A"}
             </tr>
           </table>
           <p>
-            <span style="font-weight: bold;">Mode:</span> ${pay_type || "N/A"}</br>
+            <span style="font-weight: bold;">Mode:</span> ${pay_type || "N/A"
+      }</br>
             ${txnLine}
             <span style="font-weight: bold;">Remaining Loan:</span> ${remainingLoan || "N/A"
       }</br>
@@ -252,7 +253,7 @@ Collected by: ${agent_name || "N/A"}
           <div class="line"></div>
           <p><span style="font-weight: bold;">Collected By:</span> ${agent_name || "N/A"
       }</p>
-                    <p style="text-align: center; font-size: 12px; margin-top: 10px;">*** Thank You ***</p>
+          <p style="margin-top: 10px; text-align: center; font-size: 0.9em;">*** Thank You ***</p>
         </div>
       </body>
       </html>
@@ -277,7 +278,7 @@ Collected by: ${agent_name || "N/A"}
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.white }}>
-      <View style={{ marginHorizontal: 22, marginTop: 12 }}>
+      <View style={{ marginHorizontal: 22, marginTop: 12, flex: 1 }}>
         <Header />
 
         <Button
@@ -375,19 +376,19 @@ Collected by: ${agent_name || "N/A"}
           <Text
             style={[
               styles.textStyle,
-              { fontSize: 14, fontWeight: "bold", marginBottom: 5 },
+              { fontSize: 14, fontWeight: "bold" },
             ]}
           >
             {groupOrLoanDisplay}
           </Text>
 
-          <View style={styles.amountBox}>
+          <View style={{ ...styles.amountBox, marginVertical: 10 }}>
             <Text style={styles.amountText}>
-              Received Amount | Rs.{amount || "0"}
+              Received Amount | Rs.{amount || 0}
             </Text>
           </View>
 
-          <View style={{ marginTop: 5 }}>
+          <View >
             <Text style={styles.textStyle}>
               <Text style={{ fontWeight: "bold" }}>Mode:</Text>{" "}
               {pay_type || "N/A"}
@@ -499,4 +500,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default LoanPrint;
+export default LoanRePrint;
