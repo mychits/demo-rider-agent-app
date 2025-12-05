@@ -1,4 +1,4 @@
-package com.gagansk.agentapp
+package com.demorider.agent.mychits.co.`in`
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build

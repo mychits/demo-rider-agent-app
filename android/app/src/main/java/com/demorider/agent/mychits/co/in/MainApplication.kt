@@ -1,4 +1,4 @@
-package com.gagansk.agentapp
+package com.demorider.agent.mychits.co.`in`
 
 import android.app.Application
 import android.content.res.Configuration
